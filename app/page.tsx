@@ -48,6 +48,32 @@ const normalizeVal = (val: number, id: string) => {
 export default function Home() {
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState<"home" | "record" | "map" | "ranking">("home");
+  const [previousTab, setPreviousTab] = useState<"home" | "record" | "map" | "ranking">("home");
+
+  // Keep track of the previous tab for smart back navigation (deterministic forward tracking)
+  const prevTabRef = React.useRef<"home" | "record" | "map" | "ranking">("home");
+  useEffect(() => {
+    const oldTab = prevTabRef.current;
+    
+    if (activeTab === "ranking" || activeTab === "home") {
+      setPreviousTab("home");
+    } else if (activeTab === "map") {
+      if (oldTab === "ranking") {
+        setPreviousTab("ranking");
+      } else if (oldTab === "home") {
+        setPreviousTab("home");
+      }
+    } else if (activeTab === "record") {
+      if (oldTab === "map") {
+        setPreviousTab("map");
+      } else {
+        setPreviousTab("home");
+      }
+    }
+    
+    prevTabRef.current = activeTab;
+  }, [activeTab]);
+
   const [records, setRecords] = useState<EinspannerRecord[]>([]);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>({ lat: 50, lng: 50 });
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -92,6 +118,7 @@ export default function Home() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [naverMapLoaded, setNaverMapLoaded] = useState(false);
   const [randomCafes, setRandomCafes] = useState<EinspannerRecord[]>([]);
+  const [visibleCafeIds, setVisibleCafeIds] = useState<string[] | null>(null);
 
   // Setup current location (Seoul City Hall as default base: 37.5665, 126.9780)
   const fetchCurrentLocation = () => {
@@ -625,6 +652,33 @@ export default function Home() {
       });
     });
 
+    // Event listener for map bounds changes (drag, zoom, etc.) to filter visible list
+    const updateVisibleCafes = () => {
+      const bounds = map.getBounds();
+      if (!bounds) return;
+
+      const visibleIds: string[] = [];
+      records.forEach(cafe => {
+        const isForgotten = cafe.place.replace(/\s/g, "").includes("기억안남");
+        if (isForgotten) return;
+
+        const latlng = new naver.maps.LatLng(cafe.lat, cafe.lng);
+        if (bounds.hasLatLng(latlng)) {
+          visibleIds.push(cafe.id);
+        }
+      });
+      setVisibleCafeIds(visibleIds);
+    };
+
+    const idleListener = naver.maps.Event.addListener(map, "idle", updateVisibleCafes);
+    
+    // Initial calculation
+    updateVisibleCafes();
+
+    return () => {
+      naver.maps.Event.removeListener(idleListener);
+    };
+
   }, [activeTab, userLocation, records, naverMapLoaded, selectedMapCafe]);
 
   // Sorting logic for rankings
@@ -689,9 +743,9 @@ export default function Home() {
 
       {/* Centered Transparent Title Header */}
       <header className="sticky top-0 bg-white/90 backdrop-blur-md text-[#292929] px-4 py-4 flex items-center justify-center border-b border-[#292929] z-30 min-h-[58px]">
-        {activeTab !== "home" && activeTab !== "record" && (
+        {activeTab !== "home" && activeTab !== "record" && activeTab !== "ranking" && (
           <button
-            onClick={() => { setActiveTab("home"); setSelectedMapCafe(null); }}
+            onClick={() => { setActiveTab(previousTab); setSelectedMapCafe(null); }}
             className="absolute left-4 p-2 hover:bg-zinc-100 transition-colors flex items-center justify-center border border-transparent z-10"
           >
             <svg className="w-4 h-4 text-[#292929]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -700,7 +754,7 @@ export default function Home() {
           </button>
         )}
         {(activeTab === "home" || activeTab === "ranking") ? (
-          <div className={`w-full flex items-center justify-between gap-3 ${activeTab === "ranking" ? "pl-10 pr-20" : ""}`}>
+          <div className={`w-full flex items-center justify-between gap-3 ${activeTab === "ranking" ? "pl-0 pr-20" : ""}`}>
             {/* Sleek Search Input */}
             <div className="relative flex-1">
               <Search className="w-3.5 h-3.5 text-[#292929] absolute left-3 top-1/2 -translate-y-1/2" />
@@ -728,20 +782,22 @@ export default function Home() {
             </div>
 
             {/* Sync Button */}
-            <button
-              onClick={() => syncWithSupabase(records)}
-              disabled={isSyncing}
-              className={`px-3 py-2 bg-white text-[#292929] hover:bg-[#292929] hover:text-white transition-all duration-150 border border-[#292929] shrink-0 flex items-center gap-1.5 ${isSyncing ? "opacity-60 cursor-not-allowed" : ""}`}
-              title="데이터 동기화"
-            >
-              <RefreshCw className={`w-3 h-3 ${isSyncing ? "animate-spin" : ""}`} />
-              <span className="text-[10px] font-mono font-medium tracking-[0.1em] uppercase">SYNC</span>
-            </button>
+            {activeTab === "home" && (
+              <button
+                onClick={() => syncWithSupabase(records)}
+                disabled={isSyncing}
+                className={`px-3 py-2 bg-white text-[#292929] hover:bg-[#292929] hover:text-white transition-all duration-150 border border-[#292929] shrink-0 flex items-center gap-1.5 ${isSyncing ? "opacity-60 cursor-not-allowed" : ""}`}
+                title="데이터 동기화"
+              >
+                <RefreshCw className={`w-3 h-3 ${isSyncing ? "animate-spin" : ""}`} />
+                <span className="text-[10px] font-mono font-medium tracking-[0.1em] uppercase">SYNC</span>
+              </button>
+            )}
           </div>
         ) : null}
         {(activeTab === "map") && (
           <button
-            onClick={() => { setActiveTab("home"); setSelectedMapCafe(null); }}
+            onClick={() => { setActiveTab(previousTab); setSelectedMapCafe(null); }}
             className="absolute right-4 text-xs font-mono font-medium tracking-[0.1em] uppercase bg-white text-[#292929] hover:bg-[#292929] hover:text-white border border-[#292929] px-3 py-1.5 transition-all z-10"
           >
             CLOSE
@@ -749,7 +805,7 @@ export default function Home() {
         )}
         {activeTab === "ranking" && (
           <button
-            onClick={() => { setActiveTab("home"); setSelectedMapCafe(null); }}
+            onClick={() => { setActiveTab(previousTab); setSelectedMapCafe(null); }}
             className="absolute right-4 text-xs font-mono font-medium tracking-[0.1em] uppercase bg-white text-[#292929] hover:bg-[#292929] hover:text-white border border-[#292929] px-3 py-1.5 transition-all z-10"
           >
             CLOSE
@@ -860,7 +916,7 @@ export default function Home() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-white shrink-0">
               <button 
                 type="button" 
-                onClick={() => { setActiveTab("home"); setPhoto(""); setPlace(""); }}
+                onClick={() => { setActiveTab(previousTab); setPhoto(""); setPlace(""); }}
                 className="text-xs font-bold text-zinc-800"
               >
                 취소
@@ -1162,36 +1218,36 @@ export default function Home() {
             {selectedMapCafe ? (
               <>
                 {/* 1. 이미지 크게 */}
-                <div className="w-full rounded-2xl overflow-hidden border border-[#E9E1D6] shadow-sm">
+                <div className="w-full border border-[#292929] overflow-hidden">
                   {selectedMapCafe.photo ? (
                     <div className="w-full aspect-square overflow-hidden">
                       <img src={selectedMapCafe.photo} alt={selectedMapCafe.place} className="w-full h-full object-cover" />
                     </div>
                   ) : (
-                    <div className="w-full aspect-square bg-gradient-to-br from-[#2A1A12] to-[#4A3222] flex items-center justify-center">
-                      <Coffee className="w-12 h-12 text-[#FAF6F0]/20" />
+                    <div className="w-full aspect-square bg-zinc-50 flex items-center justify-center border-b border-[#292929]">
+                      <span className="font-mono text-xs tracking-[0.2em] text-zinc-400 uppercase">NO IMAGE</span>
                     </div>
                   )}
                 </div>
 
                 {/* 2. 카페 정보 */}
-                <div className="bg-white border border-[#E9E1D6] rounded-2xl overflow-hidden shadow-md animate-slide-up">
-                  <div className="p-4 flex flex-col gap-3">
-                    {/* 카페 이름 + 별점 + 가격 */}
-                    <div>
-                      <h3 className="text-sm font-bold text-[#2A1A12]">{selectedMapCafe.place}</h3>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <div className="flex items-center gap-0.5 text-amber-500 font-bold text-[11px]">
-                          <Star className="w-3.5 h-3.5 fill-amber-500" />
-                          <span>{selectedMapCafe.rating.toFixed(1)}</span>
+                <div className="bg-white border border-[#292929] overflow-hidden">
+                  <div className="p-4 flex flex-col gap-4">
+                    {/* 카페 이름 + 별점 + 가격 + 닫기 버튼 */}
+                    <div className="flex justify-between items-start gap-4">
+                      <div>
+                        <h3 className="text-sm font-semibold text-[#292929] uppercase tracking-tight">{selectedMapCafe.place}</h3>
+                        <div className="flex items-center gap-1.5 mt-1 font-mono text-[10px] text-[#292929]">
+                          <span>★ {selectedMapCafe.rating.toFixed(1)}</span>
+                          <span className="text-zinc-300">|</span>
+                          <span>{selectedMapCafe.price.toLocaleString()} KRW</span>
+                          {selectedMapCafe.distance && (
+                            <>
+                              <span className="text-zinc-300">|</span>
+                              <span>{(selectedMapCafe.distance / 1000).toFixed(2)} KM</span>
+                            </>
+                          )}
                         </div>
-                        <span className="w-1 h-1 bg-zinc-300 rounded-full"></span>
-                        <span className="text-[10px] text-[#8B5A2B] font-mono">{selectedMapCafe.price.toLocaleString()}원</span>
-                        {selectedMapCafe.distance && (
-                          <span className="text-[10px] text-[#292929] font-mono">
-                            {(selectedMapCafe.distance / 1000).toFixed(2)}km
-                          </span>
-                        )}
                       </div>
                     </div>
 
@@ -1277,21 +1333,86 @@ export default function Home() {
                 />
               </>
             ) : (
-              /* 카페 미선택 시: 지도 크게 */
+              /* 카페 미선택 시: 지도 크게 + 아래에 내 위치 기준 가까운 순 카페 나열 */
               <>
                 <div
                   ref={mapRef}
-                  className="w-full bg-[#ECE6DC] rounded-2xl overflow-hidden border border-[#E9E1D6] shadow-inner select-none"
+                  className="w-full bg-zinc-50 border border-[#292929] select-none"
                   style={{ height: "350px" }}
                 />
-                <div className="pb-4 pt-2 bg-gradient-to-t from-[#FDFBF7] to-transparent">
-                  <button
-                    onClick={() => setActiveTab("record")}
-                    className="w-full bg-[#2A1A12] text-[#FAF6F0] text-sm font-bold py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-2 hover:bg-[#3A2A1A] active:scale-[0.98] transition-all"
-                  >
-                    <Plus className="w-4 h-4" />
-                    지도에서 기록하기
-                  </button>
+                
+                <button
+                  onClick={() => setActiveTab("record")}
+                  className="w-full bg-white text-[#292929] border border-[#292929] text-xs font-mono font-medium tracking-[0.15em] py-4 uppercase transition-all duration-150 hover:bg-[#292929] hover:text-white"
+                >
+                  ADD NEW RECORD HERE +
+                </button>
+
+                {/* 가까운 순 카페 목록 */}
+                <div className="flex flex-col gap-4 mt-2">
+                  <div className="border-b border-[#292929] pb-2 flex justify-between items-center">
+                    <span className="font-mono text-[10px] font-medium tracking-[0.15em] uppercase text-[#292929]">
+                      04 / NEARBY CAFES (CLOSEST FIRST)
+                    </span>
+                  </div>
+
+                  {[...enhancedRecords]
+                    .filter(cafe => visibleCafeIds === null || visibleCafeIds.includes(cafe.id))
+                    .sort((a, b) => (a.distance || 999999) - (b.distance || 999999))
+                    .map((cafe, index) => {
+                      const displayNum = String(index + 1).padStart(2, '0');
+                      return (
+                        <div
+                          key={cafe.id}
+                          onClick={() => setSelectedMapCafe(cafe)}
+                          className="bg-white border border-[#292929] p-4 flex gap-4 relative cursor-pointer hover:bg-zinc-50"
+                        >
+                          {/* Index Rank Number */}
+                          <div className="absolute top-4 left-4 w-6 h-6 border border-[#292929] bg-white flex items-center justify-center font-mono text-[10px] text-[#292929] font-bold z-10">
+                            {displayNum}
+                          </div>
+
+                          <div className="pl-8 flex gap-4 w-full">
+                            {/* Image Frame */}
+                            <div className="w-16 h-16 bg-zinc-50 border border-[#292929] flex items-center justify-center overflow-hidden shrink-0">
+                              {cafe.photo ? (
+                                <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="font-mono text-[8px] tracking-tight text-zinc-400">NO IMG</span>
+                              )}
+                            </div>
+
+                            <div className="flex-1 min-w-0 flex flex-col justify-between">
+                              <div>
+                                <div className="flex items-center justify-between gap-1">
+                                  <h4 className="text-xs font-semibold text-[#292929] truncate uppercase tracking-tight">{cafe.place}</h4>
+                                  <span className="text-[10px] text-[#292929] font-mono shrink-0">
+                                    {cafe.price.toLocaleString()} KRW
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-[10px] text-[#292929] font-mono">★ {cafe.rating.toFixed(1)}</span>
+                                  <span className="text-[10px] text-zinc-300">|</span>
+                                  <span className="text-[9px] text-[#292929] font-mono uppercase tracking-tight">
+                                    SWT: {cafe.sweetness} / TCK: {cafe.texture}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between mt-3 pt-2 border-t border-[#292929] border-dashed">
+                                <span className="text-[9px] text-zinc-400 font-mono uppercase">
+                                  {cafe.distance ? `DIST / ${(cafe.distance / 1000).toFixed(2)} KM` : "DIST / UNKNOWN"}
+                                </span>
+                                <span className="text-[9px] text-[#292929] font-mono tracking-[0.1em] uppercase font-bold flex items-center">
+                                  FOCUS ON MAP →
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               </>
             )}
@@ -1306,13 +1427,6 @@ export default function Home() {
                 <span className="font-mono text-[10px] font-medium tracking-[0.1em] uppercase text-[#292929] block mb-1">03 / RANKINGS</span>
                 <h2 className="text-xl font-light tracking-[-0.02em] uppercase text-[#292929]">EINSPÄNNER TOP LIST</h2>
               </div>
-              <button
-                onClick={fetchCurrentLocation}
-                className={`flex items-center gap-1.5 text-[9px] font-mono font-medium tracking-[0.1em] uppercase bg-white text-[#292929] hover:bg-[#292929] hover:text-white px-3 py-1.5 border border-[#292929] transition-all duration-150 ${isGettingLocation ? "animate-pulse" : ""}`}
-              >
-                <Navigation className="w-2.5 h-2.5" />
-                <span>GPS UPDATE</span>
-              </button>
             </div>
 
             {/* Filters Horizontal Chips */}
@@ -1362,7 +1476,8 @@ export default function Home() {
                 return (
                   <div
                     key={cafe.id}
-                    className="bg-white border border-[#292929] p-4 flex gap-4 relative"
+                    onClick={() => { setSelectedMapCafe(cafe); setActiveTab("map"); }}
+                    className="bg-white border border-[#292929] p-4 flex gap-4 relative cursor-pointer hover:bg-zinc-50 transition-colors"
                   >
                     {/* Index Rank Number */}
                     <div className="absolute top-4 left-4 w-6 h-6 border border-[#292929] bg-white flex items-center justify-center font-mono text-[10px] text-[#292929] font-bold z-10">
