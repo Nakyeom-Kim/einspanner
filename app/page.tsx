@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import {
   Plus,
   MapPin,
@@ -14,7 +15,9 @@ import {
   ChevronRight,
   Navigation,
   Map as MapIcon,
-  X
+  X,
+  RefreshCw,
+  Database
 } from "lucide-react";
 
 interface EinspannerRecord {
@@ -140,6 +143,8 @@ export default function Home() {
   // Ranking Filters
   const [rankingFilter, setRankingFilter] = useState<"rating" | "cream-sweet" | "cream-texture" | "coffee-taste" | "price" | "distance">("rating");
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [naverMapLoaded, setNaverMapLoaded] = useState(false);
   const [randomCafes, setRandomCafes] = useState<EinspannerRecord[]>([]);
 
@@ -151,31 +156,124 @@ export default function Home() {
     }
   }, [records]);
 
+  // Sync records with Supabase
+  const syncWithSupabase = async (localRecords: EinspannerRecord[]) => {
+    setIsSyncing(true);
+    try {
+      // 1. Fetch current records from Supabase
+      const { data: dbRecords, error: fetchError } = await supabase
+        .from('einspanner_records')
+        .select('*');
 
-  // Load records from local storage on mount
+      if (fetchError) throw fetchError;
+
+      // 2. Identify records that exist locally but not in DB, and insert them
+      const dbIds = new Set((dbRecords || []).map(r => r.id));
+      const userRecords = localRecords.filter(r => r.id.startsWith("user_"));
+      const recordsToInsert = userRecords.filter(r => !dbIds.has(r.id));
+
+      if (recordsToInsert.length > 0) {
+        const formatted = recordsToInsert.map(r => ({
+          id: r.id,
+          place: r.place,
+          photo: r.photo,
+          price: r.price,
+          sweetness: r.sweetness,
+          texture: r.texture,
+          coffee_taste: r.coffeeTaste,
+          notes: r.notes,
+          rating: r.rating,
+          lat: r.lat,
+          lng: r.lng,
+          created_at: r.createdAt
+        }));
+
+        const { error: insertError } = await supabase
+          .from('einspanner_records')
+          .insert(formatted);
+
+        if (insertError) throw insertError;
+      }
+
+      // 3. Get updated records from DB and merge
+      const { data: updatedDbRecords, error: refetchError } = await supabase
+        .from('einspanner_records')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (refetchError) throw refetchError;
+
+      const mergedMap = new Map<string, EinspannerRecord>();
+      
+      // Seed with initial default cafes first
+      INITIAL_CAFES.forEach(c => mergedMap.set(c.id, c));
+
+      // Add local state user records
+      userRecords.forEach(c => mergedMap.set(c.id, c));
+
+      // Overwrite/merge with DB records
+      if (updatedDbRecords) {
+        updatedDbRecords.forEach(db => {
+          mergedMap.set(db.id, {
+            id: db.id,
+            place: db.place,
+            photo: db.photo || "",
+            price: db.price,
+            sweetness: db.sweetness,
+            texture: db.texture,
+            coffeeTaste: db.coffee_taste,
+            notes: db.notes || "",
+            rating: db.rating,
+            lat: db.lat,
+            lng: db.lng,
+            createdAt: db.created_at
+          });
+        });
+      }
+
+      const mergedList = Array.from(mergedMap.values()).sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      setRecords(mergedList);
+      localStorage.setItem("einspanner_records", JSON.stringify(mergedList));
+    } catch (err) {
+      console.error("Supabase sync error:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Load records on mount
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 2800);
 
-    // Version-based data reset: if version changed, clear old data and load fresh
     const DATA_VERSION = "v2_real_cafes";
     const savedVersion = localStorage.getItem("einspanner_data_version");
     const saved = localStorage.getItem("einspanner_records");
 
+    let initialList: EinspannerRecord[] = [];
+
     if (savedVersion !== DATA_VERSION || !saved) {
-      // New version or no data: load fresh INITIAL_CAFES
+      initialList = INITIAL_CAFES;
       setRecords(INITIAL_CAFES);
       localStorage.setItem("einspanner_records", JSON.stringify(INITIAL_CAFES));
       localStorage.setItem("einspanner_data_version", DATA_VERSION);
     } else {
       try {
-        setRecords(JSON.parse(saved));
+        initialList = JSON.parse(saved);
+        setRecords(initialList);
       } catch (e) {
+        initialList = INITIAL_CAFES;
         setRecords(INITIAL_CAFES);
         localStorage.setItem("einspanner_records", JSON.stringify(INITIAL_CAFES));
       }
     }
+
+    // Trigger Supabase Sync on load
+    syncWithSupabase(initialList);
 
     // Try to fetch location on mount
     fetchCurrentLocation();
@@ -250,6 +348,7 @@ export default function Home() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setPhotoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPhoto(reader.result as string);
@@ -259,49 +358,141 @@ export default function Home() {
   };
 
   // Form submit
-  const handleAddRecord = (e: React.FormEvent) => {
+  const handleAddRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!place.trim()) return;
 
-    // Use current map center or fallback to default Seoul City Hall coordinates if customCoord not provided
-    const lat = customCoord ? customCoord.lat : (userLocation.lat + (Math.random() - 0.5) * 0.02);
-    const lng = customCoord ? customCoord.lng : (userLocation.lng + (Math.random() - 0.5) * 0.02);
+    setIsSyncing(true);
+    let finalPhotoUrl = photo;
 
-    const newRecord: EinspannerRecord = {
-      id: "user_" + Date.now(),
-      place,
-      photo: photo || "",
-      price,
-      sweetness,
-      texture,
-      coffeeTaste,
-      notes,
-      rating,
-      lat,
-      lng,
-      createdAt: new Date().toISOString()
-    };
+    try {
+      // 1. If there is a photoFile, upload to Supabase Storage first
+      if (photoFile) {
+        const fileExt = photoFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `records/${fileName}`;
 
-    const updated = [newRecord, ...records];
-    saveRecords(updated);
+        const { error: uploadError } = await supabase.storage
+          .from('einspanner')
+          .upload(filePath, photoFile);
 
-    // Reset Form
-    setPlace("");
-    setPrice(5500);
-    setSweetness(0);
-    setTexture(0);
-    setCoffeeTaste(0);
-    setNotes("");
-    setRating(0);
-    setPhoto("");
-    setCustomCoord(null);
-    setTemporaryPin(null);
-    setPlaceSuggestions([]);
-    setShowSuggestions(false);
+        if (uploadError) throw uploadError;
 
-    // Go to map and select the newly added cafe to open its drawer details
-    setSelectedMapCafe(newRecord);
-    setActiveTab("map");
+        // Get Public URL
+        const { data: publicUrlData } = supabase.storage
+          .from('einspanner')
+          .getPublicUrl(filePath);
+
+        if (publicUrlData) {
+          finalPhotoUrl = publicUrlData.publicUrl;
+        }
+      }
+
+      // 2. Setup lat/lng
+      const lat = customCoord ? customCoord.lat : (userLocation.lat + (Math.random() - 0.5) * 0.02);
+      const lng = customCoord ? customCoord.lng : (userLocation.lng + (Math.random() - 0.5) * 0.02);
+
+      const recordId = "user_" + Date.now();
+      const newRecord: EinspannerRecord = {
+        id: recordId,
+        place,
+        photo: finalPhotoUrl || "",
+        price,
+        sweetness,
+        texture,
+        coffeeTaste,
+        notes,
+        rating,
+        lat,
+        lng,
+        createdAt: new Date().toISOString()
+      };
+
+      // 3. Save locally
+      const updated = [newRecord, ...records];
+      saveRecords(updated);
+
+      // 4. Insert to Supabase DB
+      const { error: dbError } = await supabase
+        .from('einspanner_records')
+        .insert({
+          id: recordId,
+          place,
+          photo: finalPhotoUrl || "",
+          price,
+          sweetness,
+          texture,
+          coffee_taste: coffeeTaste,
+          notes,
+          rating,
+          lat,
+          lng,
+          created_at: newRecord.createdAt
+        });
+
+      if (dbError) throw dbError;
+
+      // Reset Form
+      setPlace("");
+      setPrice(5500);
+      setSweetness(0);
+      setTexture(0);
+      setCoffeeTaste(0);
+      setNotes("");
+      setRating(0);
+      setPhoto("");
+      setPhotoFile(null);
+      setCustomCoord(null);
+      setTemporaryPin(null);
+      setPlaceSuggestions([]);
+      setShowSuggestions(false);
+
+      // Go to map and select the newly added cafe to open its drawer details
+      setSelectedMapCafe(newRecord);
+      setActiveTab("map");
+    } catch (err) {
+      console.error("Failed to save record:", err);
+      alert("기록 등록 중 오류가 발생했습니다. 로컬에 임시 저장되었습니다.");
+      
+      // Fallback: save locally at least
+      const lat = customCoord ? customCoord.lat : (userLocation.lat + (Math.random() - 0.5) * 0.02);
+      const lng = customCoord ? customCoord.lng : (userLocation.lng + (Math.random() - 0.5) * 0.02);
+      const newRecord: EinspannerRecord = {
+        id: "user_" + Date.now(),
+        place,
+        photo: photo || "",
+        price,
+        sweetness,
+        texture,
+        coffeeTaste,
+        notes,
+        rating,
+        lat,
+        lng,
+        createdAt: new Date().toISOString()
+      };
+      const updated = [newRecord, ...records];
+      saveRecords(updated);
+
+      setPlace("");
+      setPrice(5500);
+      setSweetness(0);
+      setTexture(0);
+      setCoffeeTaste(0);
+      setNotes("");
+      setRating(0);
+      setPhoto("");
+      setPhotoFile(null);
+      setCustomCoord(null);
+      setTemporaryPin(null);
+      setPlaceSuggestions([]);
+      setShowSuggestions(false);
+
+      setSelectedMapCafe(newRecord);
+      setActiveTab("map");
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   // Setup current location (Seoul City Hall as default base: 37.5665, 126.9780)
@@ -616,9 +807,38 @@ export default function Home() {
           </button>
         )}
         {activeTab === "home" && (
-          <h1 className="text-xs font-bold text-[#8B5A2B] tracking-wide">
-            세상에서 가장 맛있는 아인슈페너를 찾아서
-          </h1>
+          <div className="w-full flex items-center justify-between gap-3 px-2">
+            {/* Sleek Search Input */}
+            <div className="relative flex-1">
+              <Search className="w-3.5 h-3.5 text-[#8B5A2B] absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="카페 이름 또는 노트 검색"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#FAF6F0] text-xs text-[#2A1A12] pl-8 pr-3 py-2 rounded-full border border-[#E9E1D6] focus:outline-none focus:border-[#8B5A2B] placeholder-[#A59586]"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-zinc-200 rounded-full"
+                >
+                  <X className="w-3 h-3 text-[#8B5A2B]" />
+                </button>
+              )}
+            </div>
+
+            {/* Sync Button */}
+            <button
+              onClick={() => syncWithSupabase(records)}
+              disabled={isSyncing}
+              className={`p-2 hover:bg-[#FAF6F0] rounded-full transition-all text-[#8B5A2B] flex items-center gap-1 border border-[#E9E1D6]/40 shrink-0 ${isSyncing ? "opacity-60 cursor-not-allowed" : ""}`}
+              title="데이터 동기화"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+              <span className="text-[9px] font-bold">동기화</span>
+            </button>
+          </div>
         )}
         {(activeTab === "map" || activeTab === "ranking") && (
           <button
@@ -730,6 +950,12 @@ export default function Home() {
                   <Coffee className="w-4 h-4 text-[#8B5A2B]" />
                   <h3 className="text-xs font-extrabold text-[#2A1A12]">오늘의 추천 아인슈페너</h3>
                 </div>
+                <button
+                  onClick={() => setActiveTab("ranking")}
+                  className="text-[10px] text-[#C08C5D] flex items-center hover:underline"
+                >
+                  더보기 <ChevronRight className="w-3 h-3" />
+                </button>
               </div>
 
               {/* 좌우 슬라이드 리스트 */}
@@ -766,6 +992,44 @@ export default function Home() {
                 ))}
               </div>
             </div>
+
+            {/* 검색 결과 표시 (검색어가 있을 경우) */}
+            {searchQuery.trim() && (
+              <div className="bg-white border border-[#E9E1D6] rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+                <div className="border-b border-[#FAF6F0] pb-2">
+                  <h3 className="text-xs font-extrabold text-[#2A1A12]">검색 결과 ({filteredRecords.length})</h3>
+                </div>
+                {filteredRecords.length > 0 ? (
+                  <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto">
+                    {filteredRecords.map((cafe) => (
+                      <div
+                        key={cafe.id}
+                        onClick={() => { setSelectedMapCafe(cafe); setActiveTab("map"); }}
+                        className="flex items-center gap-3 p-2 hover:bg-[#FAF6F0] rounded-xl border border-transparent hover:border-[#E9E1D6] transition-colors cursor-pointer"
+                      >
+                        <div className="w-12 h-12 rounded-lg bg-[#FAF6F0] border border-[#E9E1D6]/40 flex items-center justify-center overflow-hidden shrink-0">
+                          {cafe.photo ? (
+                            <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover" />
+                          ) : (
+                            <Coffee className="w-5 h-5 text-[#C08C5D]" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-bold text-[#2A1A12] truncate">{cafe.place}</h4>
+                          <p className="text-[9px] text-[#8B5A2B] font-mono mt-0.5">{cafe.price.toLocaleString()}원</p>
+                        </div>
+                        <div className="flex items-center gap-0.5 text-amber-500 font-bold text-[10px] shrink-0">
+                          <Star className="w-3.5 h-3.5 fill-amber-500" />
+                          <span>{cafe.rating.toFixed(1)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-[#A59586] text-center py-4">일치하는 카페가 없습니다.</p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
