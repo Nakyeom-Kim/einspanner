@@ -105,6 +105,7 @@ export default function Home() {
   const [placeSuggestions, setPlaceSuggestions] = useState<PlaceSuggestion[]>([]);
   const [isSearchingPlace, setIsSearchingPlace] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const searchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Map States
@@ -321,9 +322,9 @@ export default function Home() {
   // Form submit
   const handleAddRecord = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!place.trim()) return;
+    if (!place.trim() || isSubmitting) return;
 
-    setIsSyncing(true);
+    setIsSubmitting(true);
     let finalPhotoUrl = photo;
 
     try {
@@ -452,7 +453,7 @@ export default function Home() {
       setSelectedMapCafe(newRecord);
       setActiveTab("map");
     } finally {
-      setIsSyncing(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -1197,14 +1198,21 @@ export default function Home() {
               <button
                 type="button"
                 onClick={handleAddRecord}
-                disabled={!place.trim()}
-                className={`w-full text-center text-xs font-mono font-medium tracking-[0.15em] py-4 uppercase border transition-all duration-150 ${
-                  place.trim() 
+                disabled={!place.trim() || isSubmitting}
+                className={`w-full text-center text-xs font-mono font-medium tracking-[0.15em] py-4 uppercase border transition-all duration-150 flex items-center justify-center gap-2 ${
+                  place.trim() && !isSubmitting
                     ? "bg-white text-[#292929] border-[#292929] hover:bg-[#292929] hover:text-white cursor-pointer" 
                     : "bg-zinc-100 text-zinc-300 border-zinc-200 cursor-not-allowed"
                 }`}
               >
-                SUBMIT RECORD +
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>SAVING ARCHIVE...</span>
+                  </>
+                ) : (
+                  <span>SUBMIT RECORD +</span>
+                )}
               </button>
             </div>
           </div>
