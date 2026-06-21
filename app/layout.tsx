@@ -7,6 +7,13 @@ export const metadata: Metadata = {
   description: "가장 맛있는 아인슈페너를 찾아서",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

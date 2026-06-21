@@ -125,12 +125,18 @@
   }
   body {
     @apply bg-zinc-100 text-foreground dark:bg-zinc-950;
+    overscroll-behavior-y: none; /* 위로 당겨서 새로고침 방지 */
   }
   body, h1, h2, h3, h4, h5, h6, input, textarea, button, select, span, p {
     font-family: 'SUIT', sans-serif !important;
   }
   html {
     font-family: 'SUIT', sans-serif !important;
+    overscroll-behavior-y: none; /* 최상위 스크롤 바운스 방지 */
+  }
+  /* 모바일 포커스 시 자동 줌 방지용 스타일 보완 */
+  input, textarea, select {
+    font-size: 16px !important;
   }
 }
 
@@ -222,4 +228,22 @@
 .scroll-fade.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* iOS Safari Input Auto-Zoom 방지 핵심 CSS 규칙 */
+input[type="text"],
+input[type="number"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  font-size: 16px !important; /* iOS 포커스 줌 방지용 최소 16px 강제 */
+}
+
+/* 모바일 화면에서만 시각적인 크기 보정이 필요하다면 스타일을 유지하되, 브라우저가 인식하는 폰트 사이즈는 16px 이상이어야 줌이 발생하지 않습니다. */
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
 }
