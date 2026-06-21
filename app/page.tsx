@@ -612,52 +612,8 @@ export default function Home() {
         {/* HOME TAB (Main stacked sections: 기록하기 -> 랭킹 -> 지도) */}
         {activeTab === "home" && (
           <div className="flex flex-col gap-6 p-4 animate-fade-in">
-            {/* 1. 랜덤 추천 섹션 (좌우 슬라이드) */}
+            {/* 1. 지도 섹션 (내위치 기반) */}
             <div className="bg-white border border-[#E9E1D6] rounded-2xl p-4 shadow-sm flex flex-col gap-3 stagger-item delay-1">
-              <div className="flex justify-between items-center border-b border-[#FAF6F0] pb-2">
-                <div className="flex items-center gap-1.5">
-                  <Coffee className="w-4 h-4 text-[#8B5A2B]" />
-                  <h3 className="text-xs font-extrabold text-[#2A1A12]">오늘의 추천 아인슈페너</h3>
-                </div>
-              </div>
-
-              {/* 좌우 슬라이드 리스트 */}
-              <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory no-scrollbar">
-                {randomCafes.map((cafe) => (
-                  <div
-                    key={cafe.id}
-                    onClick={() => { setSelectedMapCafe(cafe); setActiveTab("map"); }}
-                    className="w-[200px] shrink-0 snap-start bg-[#FAF6F0]/40 rounded-xl border border-[#E9E1D6]/60 overflow-hidden shadow-xs hover:border-[#C08C5D] transition-all cursor-pointer flex flex-col"
-                  >
-                    {/* 이미지 영역 */}
-                    <div className="w-full aspect-square bg-[#FAF6F0] border-b border-[#E9E1D6]/40 flex items-center justify-center overflow-hidden relative">
-                      {cafe.photo ? (
-                        <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#2A1A12] to-[#4A3222] flex items-center justify-center">
-                          <Coffee className="w-10 h-10 text-[#FAF6F0]/20" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 정보 영역 (이름, 가격, 별점만 표시) */}
-                    <div className="p-3 flex flex-col gap-1.5 justify-between flex-1">
-                      <h4 className="text-xs font-extrabold text-[#2A1A12] truncate">{cafe.place}</h4>
-                      <div className="flex items-center justify-between mt-auto">
-                        <span className="text-[10px] text-[#8B5A2B] font-mono font-bold">{cafe.price.toLocaleString()}원</span>
-                        <div className="flex items-center gap-0.5 text-amber-500 font-bold text-[10px]">
-                          <Star className="w-3 h-3 fill-amber-500" />
-                          <span>{cafe.rating.toFixed(1)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. 지도 섹션 (내위치 기반) */}
-            <div className="bg-white border border-[#E9E1D6] rounded-2xl p-4 shadow-sm flex flex-col gap-3 stagger-item delay-2">
               <div className="flex justify-between items-center border-b border-[#FAF6F0] pb-2">
                 <div className="flex items-center gap-1.5">
                   <MapPin className="w-4 h-4 text-[#8B5A2B]" />
@@ -679,7 +635,7 @@ export default function Home() {
               ></div>
             </div>
 
-            {/* 3. 기록하기 Card Button */}
+            {/* 2. 기록하기 Card Button */}
             <div 
               onClick={() => {
                 setActiveTab("record");
@@ -688,7 +644,7 @@ export default function Home() {
                   fileInputRef.current?.click();
                 }, 50);
               }}
-              className="cursor-pointer relative overflow-hidden bg-[#2A1A12] border border-[#E9E1D6]/20 rounded-2xl py-6 px-8 text-white shadow-md active:scale-98 flex flex-row items-center justify-center gap-8 stagger-item delay-3 cta-hover"
+              className="cursor-pointer relative overflow-hidden bg-[#2A1A12] border border-[#E9E1D6]/20 rounded-2xl py-6 px-8 text-white shadow-md active:scale-98 flex flex-row items-center justify-center gap-8 stagger-item delay-2 cta-hover"
             >
               {/* Left Side: 2D Graphic (Splash SVG) */}
               <div className="flex items-center justify-center shrink-0">
@@ -743,14 +699,58 @@ export default function Home() {
                 <span className="text-[28px] font-bold tracking-tight text-[#FAF6F0] leading-tight">기록하기</span>
               </div>
             </div>
+
+            {/* 3. 랜덤 추천 섹션 (좌우 슬라이드) */}
+            <div className="bg-white border border-[#E9E1D6] rounded-2xl p-4 shadow-sm flex flex-col gap-3 stagger-item delay-3">
+              <div className="flex justify-between items-center border-b border-[#FAF6F0] pb-2">
+                <div className="flex items-center gap-1.5">
+                  <Coffee className="w-4 h-4 text-[#8B5A2B]" />
+                  <h3 className="text-xs font-extrabold text-[#2A1A12]">오늘의 추천 아인슈페너</h3>
+                </div>
+              </div>
+
+              {/* 좌우 슬라이드 리스트 */}
+              <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory no-scrollbar">
+                {randomCafes.map((cafe) => (
+                  <div
+                    key={cafe.id}
+                    onClick={() => { setSelectedMapCafe(cafe); setActiveTab("map"); }}
+                    className="w-[200px] shrink-0 snap-start bg-[#FAF6F0]/40 rounded-xl border border-[#E9E1D6]/60 overflow-hidden shadow-xs hover:border-[#C08C5D] transition-all cursor-pointer flex flex-col"
+                  >
+                    {/* 이미지 영역 */}
+                    <div className="w-full aspect-square bg-[#FAF6F0] border-b border-[#E9E1D6]/40 flex items-center justify-center overflow-hidden relative">
+                      {cafe.photo ? (
+                        <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#2A1A12] to-[#4A3222] flex items-center justify-center">
+                          <Coffee className="w-10 h-10 text-[#FAF6F0]/20" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 정보 영역 (이름, 가격, 별점만 표시) */}
+                    <div className="p-3 flex flex-col gap-1.5 justify-between flex-1">
+                      <h4 className="text-xs font-extrabold text-[#2A1A12] truncate">{cafe.place}</h4>
+                      <div className="flex items-center justify-between mt-auto">
+                        <span className="text-[10px] text-[#8B5A2B] font-mono font-bold">{cafe.price.toLocaleString()}원</span>
+                        <div className="flex items-center gap-0.5 text-amber-500 font-bold text-[10px]">
+                          <Star className="w-3 h-3 fill-amber-500" />
+                          <span>{cafe.rating.toFixed(1)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {/* RECORD TAB - Instagram New Post Style */}
         {activeTab === "record" && (
-          <div className="animate-fade-in flex flex-col min-h-full bg-white">
-            {/* Header: Instagram Style New Post Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 sticky top-0 bg-white z-20">
+          <div className="absolute inset-0 bg-white z-40 flex flex-col h-full">
+            {/* Header: Fixed/Sticky at top */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 bg-white shrink-0">
               <button 
                 type="button" 
                 onClick={() => { setActiveTab("home"); setPhoto(""); setPlace(""); }}
@@ -758,212 +758,208 @@ export default function Home() {
               >
                 취소
               </button>
-              <h2 className="text-sm font-bold text-zinc-900">새 게시물</h2>
-              <button 
-                type="button"
-                onClick={handleAddRecord}
-                disabled={!place.trim()}
-                className={`text-sm font-bold ${place.trim() ? "text-blue-500 hover:text-blue-700" : "text-zinc-300"}`}
+              <h2 className="text-sm font-bold text-zinc-900 pr-4">새 게시물</h2>
+              <div className="w-6"></div> {/* Spacer to balance cancel button */}
+            </div>
+
+            {/* Scrollable Form Content */}
+            <div className="flex-1 overflow-y-auto">
+              {/* 1. Square Image Container (1:1 Ratio) */}
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full aspect-square bg-zinc-50 border-b border-zinc-100 relative flex items-center justify-center cursor-pointer group overflow-hidden"
               >
-                완료
-              </button>
-            </div>
-
-            {/* 1. Square Image Container (1:1 Ratio) */}
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full aspect-square bg-zinc-50 border-b border-zinc-100 relative flex items-center justify-center cursor-pointer group overflow-hidden"
-            >
-              {photo ? (
-                <img src={photo} alt="Upload Preview" className="w-full h-full object-cover" />
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-zinc-400 group-hover:text-zinc-600 transition-colors">
-                  <div className="w-12 h-12 rounded-full border-2 border-dashed border-zinc-300 flex items-center justify-center">
-                    <Camera className="w-6 h-6" />
-                  </div>
-                  <span className="text-[11px] font-bold">아인슈페너 사진 추가</span>
-                </div>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoChange}
-                className="hidden"
-              />
-            </div>
-
-            {/* Form Fields Section (Ordered: Place, Price, Rating, Cream, Coffee) */}
-            <div className="flex flex-col divider-y divider-zinc-100">
-              
-              {/* 1. 장소명 (Place Name) - Autocomplete without label */}
-              <div className="p-4 flex flex-col gap-1 border-b border-zinc-100 relative">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center shrink-0 border border-zinc-200">
-                    <MapPin className="w-4.5 h-4.5 text-[#8B5A2B]" />
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    placeholder="상호명을 입력하면 주소지 추천..."
-                    value={place}
-                    onChange={(e) => {
-                      setPlace(e.target.value);
-                      // Simulate Naver Local search recommendations based on input
-                      if (e.target.value.trim().length > 1) {
-                        const naver = (window as any).naver;
-                        // Fallback search suggestions logic
-                        const mockSuggestions = [
-                          "오츠커피 마포점 (Oats)",
-                          "마일스톤 커피 신사점 (Milestone)",
-                          "아키텍처스 카페 홍대 (Architeuthis)",
-                          "태극당 동대입구 본점",
-                          "커피 템플 (Coffee Temple)",
-                          "헬카페 로스터즈 (Hell Cafe)"
-                        ].filter(item => item.includes(e.target.value));
-                        (window as any)._suggestList = mockSuggestions;
-                      } else {
-                        (window as any)._suggestList = [];
-                      }
-                    }}
-                    className="w-full text-xs font-bold text-zinc-900 border-none outline-none focus:ring-0 p-0 placeholder-zinc-400 bg-transparent"
-                  />
-                </div>
-                
-                {/* Autocomplete suggestion UI popup */}
-                {place && (window as any)._suggestList && (window as any)._suggestList.length > 0 && (
-                  <div className="absolute left-14 right-4 top-16 bg-white border border-zinc-200 rounded-xl shadow-lg z-30 flex flex-col max-h-40 overflow-y-auto">
-                    {((window as any)._suggestList as string[]).map((suggestion, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => {
-                          setPlace(suggestion);
-                          (window as any)._suggestList = [];
-                        }}
-                        className="text-left px-3 py-2 text-xs hover:bg-[#FAF6F0] text-zinc-800 border-b border-zinc-50 last:border-b-0"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
+                {photo ? (
+                  <img src={photo} alt="Upload Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-zinc-400 group-hover:text-zinc-600 transition-colors">
+                    <div className="w-12 h-12 rounded-full border-2 border-dashed border-zinc-300 flex items-center justify-center">
+                      <Camera className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-bold">아인슈페너 사진 추가</span>
                   </div>
                 )}
-              </div>
-
-              {/* 2. 가격 설정 (Price) - Input Text with Numeric Keyboard */}
-              <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-100">
-                <span className="text-xs font-bold text-zinc-800">가격 설정</span>
-                <div className="flex items-center gap-1">
-                  <input 
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    placeholder="5500"
-                    value={price || ""}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9]/g, "");
-                      setPrice(val ? parseInt(val) : 0);
-                    }}
-                    className="w-24 text-right text-xs font-mono font-bold text-zinc-900 border-none outline-none focus:ring-0 p-0 bg-transparent"
-                  />
-                  <span className="text-xs font-bold text-zinc-500">원</span>
-                </div>
-              </div>
-
-              {/* 3. 평가 점수 (Rating) */}
-              <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-100">
-                <span className="text-xs font-bold text-zinc-800">평가 점수</span>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setRating(star)}
-                      className="hover:scale-105 transition-transform"
-                    >
-                      <Star 
-                        className={`w-5 h-5 ${star <= rating ? "fill-amber-400 text-amber-400" : "text-zinc-200"}`} 
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 4. 크림 당도 & 질감 & 커피 베이스 (1 to 10 Button Check List) */}
-              <div className="p-4 bg-zinc-50 flex flex-col gap-4 border-b border-zinc-100">
-                
-                {/* Sweetness (1-10 Buttons without numbers) */}
-                <div className="bg-white p-3 rounded-xl border border-zinc-100 flex flex-col gap-2">
-                  <div className="flex gap-1.5 overflow-x-auto py-1 no-scrollbar justify-between">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => setSweetness(num)}
-                        className={`w-7 h-7 rounded-full transition-all border shrink-0 ${sweetness === num ? "bg-[#8B5A2B] border-[#8B5A2B]" : "bg-zinc-50 border-zinc-200 hover:bg-zinc-100"}`}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex justify-between text-xs font-bold text-zinc-700 px-1 mt-1">
-                    <span>덜 단 크림</span>
-                    <span>단 크림</span>
-                  </div>
-                </div>
-
-                {/* Texture (1-10 Buttons without numbers) */}
-                <div className="bg-white p-3 rounded-xl border border-zinc-100 flex flex-col gap-2">
-                  <div className="flex gap-1.5 overflow-x-auto py-1 no-scrollbar justify-between">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => setTexture(num)}
-                        className={`w-7 h-7 rounded-full transition-all border shrink-0 ${texture === num ? "bg-[#8B5A2B] border-[#8B5A2B]" : "bg-zinc-50 border-zinc-200 hover:bg-zinc-100"}`}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex justify-between text-xs font-bold text-zinc-700 px-1 mt-1">
-                    <span>묽음</span>
-                    <span>꾸덕함</span>
-                  </div>
-                </div>
-
-                {/* Coffee Taste (1-10 Buttons without numbers) */}
-                <div className="bg-white p-3 rounded-xl border border-zinc-100 flex flex-col gap-2">
-                  <div className="flex gap-1.5 overflow-x-auto py-1 no-scrollbar justify-between">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => setCoffeeTaste(num)}
-                        className={`w-7 h-7 rounded-full transition-all border shrink-0 ${coffeeTaste === num ? "bg-[#8B5A2B] border-[#8B5A2B]" : "bg-zinc-50 border-zinc-200 hover:bg-zinc-100"}`}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex justify-between text-xs font-bold text-zinc-700 px-1 mt-1">
-                    <span>산미</span>
-                    <span>고소</span>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* 6. 맛 한줄평 (Notes) */}
-              <div className="p-4 flex flex-col gap-1.5 border-b border-zinc-100">
-                <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">한줄평</label>
-                <textarea
-                  rows={2}
-                  placeholder="ex) 크림에서 약간의 오렌지 향이 남"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full text-xs text-zinc-600 border border-zinc-100 rounded-xl p-2.5 outline-none resize-none placeholder-zinc-400"
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
                 />
               </div>
 
+              {/* Form Fields Section (Ordered: Place, Price, Rating, Cream, Coffee) */}
+              <div className="flex flex-col divider-y divider-zinc-100">
+                
+                {/* 1. 장소명 (Place Name) - Autocomplete without label */}
+                <div className="p-4 flex flex-col gap-1 border-b border-zinc-100 relative">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center shrink-0 border border-zinc-200">
+                      <MapPin className="w-4.5 h-4.5 text-[#8B5A2B]" />
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      placeholder="상호명을 입력하면 주소지 추천..."
+                      value={place}
+                      onChange={(e) => {
+                        setPlace(e.target.value);
+                        // Simulate Naver Local search recommendations based on input
+                        if (e.target.value.trim().length > 1) {
+                          const naver = (window as any).naver;
+                          // Fallback search suggestions logic
+                          const mockSuggestions = [
+                            "오츠커피 마포점 (Oats)",
+                            "마일스톤 커피 신사점 (Milestone)",
+                            "아키텍처스 카페 홍대 (Architeuthis)",
+                            "태극당 동대입구 본점",
+                            "커피 템플 (Coffee Temple)",
+                            "헬카페 로스터즈 (Hell Cafe)"
+                          ].filter(item => item.includes(e.target.value));
+                          (window as any)._suggestList = mockSuggestions;
+                        } else {
+                          (window as any)._suggestList = [];
+                        }
+                      }}
+                      className="w-full text-xs font-bold text-zinc-900 border-none outline-none focus:ring-0 p-0 placeholder-zinc-400 bg-transparent"
+                    />
+                  </div>
+                  
+                  {/* Autocomplete suggestion UI popup */}
+                  {place && (window as any)._suggestList && (window as any)._suggestList.length > 0 && (
+                    <div className="absolute left-14 right-4 top-16 bg-white border border-zinc-200 rounded-xl shadow-lg z-30 flex flex-col max-h-40 overflow-y-auto">
+                      {((window as any)._suggestList as string[]).map((suggestion, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            setPlace(suggestion);
+                            (window as any)._suggestList = [];
+                          }}
+                          className="text-left px-3 py-2 text-xs hover:bg-[#FAF6F0] text-zinc-800 border-b border-zinc-50 last:border-b-0"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. 가격 설정 (Price) - Input Text with Numeric Keyboard */}
+                <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-100">
+                  <span className="text-xs font-bold text-zinc-800">가격 설정</span>
+                  <div className="flex items-center gap-1">
+                    <input 
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="5500"
+                      value={price || ""}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, "");
+                        setPrice(val ? parseInt(val) : 0);
+                      }}
+                      className="w-24 text-right text-xs font-mono font-bold text-zinc-900 border-none outline-none focus:ring-0 p-0 bg-transparent"
+                    />
+                    <span className="text-xs font-bold text-zinc-500">원</span>
+                  </div>
+                </div>
+
+                {/* 3. 평가 점수 (Rating) */}
+                <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-100">
+                  <span className="text-xs font-bold text-zinc-800">평가 점수</span>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(star)}
+                        className="hover:scale-105 transition-transform"
+                      >
+                        <Star 
+                          className={`w-5 h-5 ${star <= rating ? "fill-amber-400 text-amber-400" : "text-zinc-200"}`} 
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. 크림 당도 & 질감 & 커피 베이스 (1 to 10 Button Check List) */}
+                <div className="p-4 bg-zinc-50 flex flex-col gap-4 border-b border-zinc-100">
+                  
+                  {/* Sweetness (1-10 Buttons without numbers) */}
+                  <div className="bg-white p-3 rounded-xl border border-zinc-100 flex flex-col gap-2">
+                    <div className="flex gap-1.5 overflow-x-auto py-1 no-scrollbar justify-between">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setSweetness(num)}
+                          className={`w-7 h-7 rounded-full transition-all border shrink-0 ${sweetness === num ? "bg-[#8B5A2B] border-[#8B5A2B]" : "bg-zinc-50 border-zinc-200 hover:bg-zinc-100"}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-xs font-bold text-zinc-700 px-1 mt-1">
+                      <span>덜 단 크림</span>
+                      <span>단 크림</span>
+                    </div>
+                  </div>
+
+                  {/* Texture (1-10 Buttons without numbers) */}
+                  <div className="bg-white p-3 rounded-xl border border-zinc-100 flex flex-col gap-2">
+                    <div className="flex gap-1.5 overflow-x-auto py-1 no-scrollbar justify-between">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setTexture(num)}
+                          className={`w-7 h-7 rounded-full transition-all border shrink-0 ${texture === num ? "bg-[#8B5A2B] border-[#8B5A2B]" : "bg-zinc-50 border-zinc-200 hover:bg-zinc-100"}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-xs font-bold text-zinc-700 px-1 mt-1">
+                      <span>묽음</span>
+                      <span>꾸덕함</span>
+                    </div>
+                  </div>
+
+                  {/* Coffee Taste (1-10 Buttons without numbers) */}
+                  <div className="bg-white p-3 rounded-xl border border-[#E9E1D6]/30 flex flex-col gap-2">
+                    <div className="flex gap-1.5 overflow-x-auto py-1 no-scrollbar justify-between">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setCoffeeTaste(num)}
+                          className={`w-7 h-7 rounded-full transition-all border shrink-0 ${coffeeTaste === num ? "bg-[#8B5A2B] border-[#8B5A2B]" : "bg-zinc-50 border-zinc-200 hover:bg-zinc-100"}`}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-xs font-bold text-zinc-700 px-1 mt-1">
+                      <span>산미</span>
+                      <span>고소</span>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* 6. 맛 한줄평 (Notes) */}
+                <div className="p-4 flex flex-col gap-1.5 border-b border-zinc-100">
+                  <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">한줄평</label>
+                  <textarea
+                    rows={2}
+                    placeholder="ex) 크림에서 약간의 오렌지 향이 남"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full text-xs text-zinc-600 border border-zinc-100 rounded-xl p-2.5 outline-none resize-none placeholder-zinc-400"
+                  />
+                </div>
+
+              </div>
             </div>
             
-            {/* Share Bottom Action */}
-            <div className="p-4 bg-white border-t border-zinc-100">
+            {/* Fixed Complete Button at Bottom */}
+            <div className="p-4 bg-white border-t border-zinc-100 shrink-0 z-10">
               <button
                 type="button"
                 onClick={handleAddRecord}
