@@ -50,8 +50,8 @@ export async function GET(request: NextRequest) {
       category: item.category || "",
       roadAddress: item.roadAddress || item.address || "",
       address: item.address || item.roadAddress || "",
-      lng: parseInt(item.mapx) / 1_000_000,   // KATECH → WGS84 longitude
-      lat: parseInt(item.mapy) / 1_000_000,   // KATECH → WGS84 latitude
+      lng: parseInt(item.mapx) / 10_000_000,   // Naver Mapx → WGS84 longitude (divided by 10 million)
+      lat: parseInt(item.mapy) / 10_000_000,   // Naver Mapy → WGS84 latitude (divided by 10 million)
       telephone: item.telephone || "",
     }));
 

@@ -116,6 +116,12 @@ export default function Home() {
       // Only use records that exist in the database (Supabase is the single source of truth)
       if (dbRecords) {
         dbRecords.forEach(db => {
+          let lat = db.lat;
+          let lng = db.lng;
+          // Auto-correct coordinate scaling bug (if stored as 370.x instead of 37.x)
+          if (lat > 90) lat = lat / 10;
+          if (lng > 180) lng = lng / 10;
+
           syncedList.push({
             id: db.id,
             place: db.place,
@@ -126,8 +132,8 @@ export default function Home() {
             coffeeTaste: db.coffee_taste,
             notes: db.notes || "",
             rating: db.rating,
-            lat: db.lat,
-            lng: db.lng,
+            lat: lat,
+            lng: lng,
             createdAt: db.created_at
           });
         });
@@ -704,7 +710,13 @@ export default function Home() {
                 type="text"
                 placeholder="카페 이름 또는 노트 검색..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSearchQuery(val);
+                  if (val.trim() && activeTab !== "ranking") {
+                    setActiveTab("ranking");
+                  }
+                }}
                 className="w-full bg-white text-sm text-[#292929] pl-9 pr-8 py-2 rounded-none border border-[#292929] focus:outline-none focus:bg-zinc-50 placeholder-[#7a7a7a] tracking-tight"
               />
               {searchQuery && (
@@ -840,79 +852,6 @@ export default function Home() {
                 ))}
               </div>
             </div>
-
-            {/* 검색 결과 표시 (검색어가 있을 경우) */}
-            {searchQuery.trim() && (
-              <div className="bg-white border border-[#292929] p-4 flex flex-col gap-4 stagger-item">
-                <div className="flex justify-between items-center border-b border-[#292929] pb-2">
-                  <span className="font-mono text-xs font-medium tracking-[0.1em] uppercase text-[#292929]">
-                    00 / SEARCH RESULTS ({filteredRecords.length})
-                  </span>
-                </div>
-                {filteredRecords.length > 0 ? (
-                  <div className="flex flex-col gap-4 max-h-[400px] overflow-y-auto no-scrollbar">
-                    {filteredRecords.map((cafe, index) => {
-                      const displayNum = String(index + 1).padStart(2, '0');
-                      return (
-                        <div
-                          key={cafe.id}
-                          className="bg-white border border-[#292929] p-4 flex gap-4 relative"
-                        >
-                          {/* Index Rank Number */}
-                          <div className="absolute top-4 left-4 w-6 h-6 border border-[#292929] bg-white flex items-center justify-center font-mono text-[10px] text-[#292929] font-bold z-10">
-                            {displayNum}
-                          </div>
-
-                          <div className="pl-8 flex gap-4 w-full">
-                            {/* Image Frame */}
-                            <div className="w-16 h-16 bg-zinc-50 border border-[#292929] flex items-center justify-center overflow-hidden shrink-0">
-                              {cafe.photo ? (
-                                <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="font-mono text-[8px] tracking-tight text-zinc-400">NO IMG</span>
-                              )}
-                            </div>
-
-                            <div className="flex-1 min-w-0 flex flex-col justify-between">
-                              <div>
-                                <div className="flex items-center justify-between gap-1">
-                                  <h4 className="text-xs font-semibold text-[#292929] truncate uppercase tracking-tight">{cafe.place}</h4>
-                                  <span className="text-[10px] text-[#292929] font-mono shrink-0">
-                                    {cafe.price.toLocaleString()} KRW
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-[10px] text-[#292929] font-mono">★ {cafe.rating.toFixed(1)}</span>
-                                  <span className="text-[10px] text-zinc-300">|</span>
-                                  <span className="text-[9px] text-[#292929] font-mono uppercase tracking-tight">
-                                    SWT: {cafe.sweetness} / TCK: {cafe.texture}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center justify-between mt-3 pt-2 border-t border-[#292929] border-dashed">
-                                <span className="text-[9px] text-zinc-400 font-mono uppercase">
-                                  {cafe.distance ? `DIST / ${(cafe.distance / 1000).toFixed(2)} KM` : "DIST / UNKNOWN"}
-                                </span>
-                                <button
-                                  onClick={() => { setSelectedMapCafe(cafe); setActiveTab("map"); }}
-                                  className="text-[9px] text-[#292929] font-mono tracking-[0.1em] uppercase font-bold flex items-center hover:underline"
-                                >
-                                  MAP VIEW →
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-[10px] font-mono text-[#292929] text-center py-4">NO MATCHING CAFE FOUND.</p>
-                )}
-              </div>
-            )}
           </div>
         )}
 
