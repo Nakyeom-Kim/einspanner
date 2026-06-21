@@ -597,15 +597,21 @@ export default function Home() {
   }, [activeTab, userLocation, records, naverMapLoaded]);
 
   // Initialize Naver Map for Map Tab (Full Screen Map)
+  // Initialize Naver Map for Map Tab (Full Screen Map / Detailed Card View)
   useEffect(() => {
     if (typeof window === "undefined" || !(window as any).naver || !(window as any).naver.maps || !mapRef.current || activeTab !== "map") return;
 
     const naver = (window as any).naver;
-    const center = new naver.maps.LatLng(userLocation.lat, userLocation.lng);
+    
+    // 만약 선택된 카페 상세 정보를 보고 있다면 해당 카페를 중심점으로 지정하고 좀 더 줌인합니다.
+    const center = selectedMapCafe
+      ? new naver.maps.LatLng(selectedMapCafe.lat, selectedMapCafe.lng)
+      : new naver.maps.LatLng(userLocation.lat, userLocation.lng);
+    const initialZoom = selectedMapCafe ? 15 : 13;
 
     const map = new naver.maps.Map(mapRef.current, {
       center: center,
-      zoom: 13,
+      zoom: initialZoom,
       zoomControl: true,
       zoomControlOptions: {
         position: naver.maps.Position.RIGHT_BOTTOM
@@ -615,8 +621,9 @@ export default function Home() {
     setMapInstance(map);
 
     // User Location Marker
+    const userCenter = new naver.maps.LatLng(userLocation.lat, userLocation.lng);
     new naver.maps.Marker({
-      position: center,
+      position: userCenter,
       map: map,
       icon: {
         content: `
@@ -636,19 +643,20 @@ export default function Home() {
 
     // Cafe Markers
     records.forEach(cafe => {
+      const isSelected = selectedMapCafe && selectedMapCafe.id === cafe.id;
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(cafe.lat, cafe.lng),
         map: map,
         title: cafe.place,
         icon: {
           content: `
-            <div class="relative flex items-center justify-center group cursor-pointer">
-              <div class="w-7 h-7 bg-[#8B5A2B] rounded-full border-2 border-white shadow-md flex items-center justify-center hover:scale-110 transition-transform">
-                <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
+            <div class="relative flex items-center justify-center cursor-pointer">
+              <div class="w-6 h-6 ${isSelected ? "bg-[#292929] text-white" : "bg-white text-[#292929]"} border border-[#292929] flex items-center justify-center font-mono text-[9px] font-bold transition-all duration-150">
+                ☕
               </div>
             </div>
           `,
-          anchor: new naver.maps.Point(14, 14)
+          anchor: new naver.maps.Point(12, 12)
         }
       });
 
@@ -681,16 +689,16 @@ export default function Home() {
         map: map,
         icon: {
           content: `
-            <div class="flex flex-col items-center animate-bounce">
-              <div class="bg-[#2A1A12] text-white text-[9px] font-bold py-1 px-2 rounded-full whitespace-nowrap shadow-md border border-white mb-0.5">
-                여기에 기록하기 +
+            <div class="flex flex-col items-center">
+              <div class="bg-[#292929] text-white font-mono text-[9px] tracking-[0.1em] uppercase py-1 px-2 border border-[#292929] whitespace-nowrap mb-1">
+                ADD HERE +
               </div>
-              <div class="w-6 h-6 bg-[#C08C5D] rounded-full border-2 border-white shadow flex items-center justify-center">
-                <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <div class="w-6 h-6 bg-white border border-[#292929] flex items-center justify-center">
+                <span class="text-sm font-light text-[#292929]">+</span>
               </div>
             </div>
           `,
-          anchor: new naver.maps.Point(35, 45)
+          anchor: new naver.maps.Point(40, 48)
         }
       });
 
@@ -700,7 +708,7 @@ export default function Home() {
       });
     });
 
-  }, [activeTab, userLocation, records, naverMapLoaded]);
+  }, [activeTab, userLocation, records, naverMapLoaded, selectedMapCafe]);
 
   // Sorting logic for rankings
   const getSortedRankings = () => {
@@ -730,100 +738,67 @@ export default function Home() {
   );
 
   return (
-    <div className="flex flex-col w-full min-h-screen bg-[#FDFBF7] font-sans relative">
+    <div className="flex flex-col w-full min-h-screen bg-white font-sans relative border-x border-[#292929]">
       {/* Splash Screen */}
       {showSplash && (
-        <div className="absolute inset-0 bg-[#2A1A12] z-50 flex flex-col items-center justify-center animate-splash p-6 text-center">
+        <div className="absolute inset-0 bg-[#292929] z-50 flex flex-col items-center justify-center animate-splash p-6 text-center">
           <div className="flex flex-col items-center gap-6">
-            {/* 2D Graphic side-view of an Einspanner Glass */}
+            {/* Minimalist Graphic of an Einspanner Glass */}
             <div className="animate-coffee">
-              <svg className="w-32 h-40 drop-shadow-xl" viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-24 h-32" viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
                 {/* Glass Cup Outline */}
-                <path d="M20 30 L30 130 C31 140, 40 148, 50 148 L70 148 C80 148, 89 140, 90 130 L100 30" fill="none" stroke="#E9E1D6" strokeWidth="2.5" opacity="0.35" />
-
-                {/* Coffee Layer (Bottom) */}
-                <path d="M26 90 L30 130 C31 135, 36 140, 42 140 L78 140 C84 140, 89 135, 90 130 L94 90 Z" fill="#2A1A12" />
-
-                {/* Gradient blending zone (Espresso mixing with cream) */}
-                <path d="M26 80 L94 80 L94 92 L26 92 Z" fill="url(#coffee-blend)" />
-
-                {/* Coffee top curve */}
-                <path d="M24 70 L96 70 L94 81 L26 81 Z" fill="#4A3222" />
-
-                {/* Thick Cream Layer (Top) */}
-                <path d="M16 28 C16 28, 25 15, 45 18 C50 12, 70 10, 80 20 C90 15, 104 28, 104 28 L98 72 L22 72 Z" fill="#FAF6F0" />
-
-                {/* Cream highlight details */}
-                <path d="M30 40 C45 35, 60 38, 75 32" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-                <path d="M40 55 C55 50, 70 52, 85 46" stroke="#E9E1D6" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
-
-                {/* Cocoa Powder Dusting on top */}
-                <circle cx="48" cy="18" r="2.5" fill="#5C3A21" />
-                <circle cx="56" cy="15" r="2" fill="#8B5A2B" />
-                <circle cx="68" cy="16" r="3" fill="#5C3A21" />
-                <circle cx="78" cy="22" r="2" fill="#8B5A2B" />
-                <circle cx="38" cy="24" r="2" fill="#5C3A21" />
-                <circle cx="85" cy="26" r="1.5" fill="#8B5A2B" />
-
-                {/* Glass Cup reflection lines */}
-                <path d="M21 35 L29 115" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
-                <path d="M99 35 L93 115" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" opacity="0.15" />
-
-                {/* Glass Rim Highlight */}
-                <path d="M19 30 C19 30, 60 25, 101 30" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.4" />
-
-                <defs>
-                  <linearGradient id="coffee-blend" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4A3222" />
-                    <stop offset="50%" stopColor="#8B5A2B" stopOpacity="0.8" />
-                    <stop offset="100%" stopColor="#2A1A12" />
-                  </linearGradient>
-                </defs>
+                <path d="M20 30 L30 130 L90 130 L100 30 Z" stroke="#ffffff" strokeWidth="1" opacity="0.8" />
+                {/* Coffee Layer */}
+                <path d="M28 85 L30 125 L90 125 L92 85 Z" fill="#ffffff" opacity="0.15" />
+                {/* Cream Layer (Flat Swiss Line Art) */}
+                <path d="M20 30 L100 30 L92 85 L28 85 Z" fill="#ffffff" />
+                {/* Division line */}
+                <line x1="28" y1="85" x2="92" y2="85" stroke="#292929" strokeWidth="1" />
               </svg>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <h2 className="text-[#C08C5D] font-mono text-sm tracking-wider uppercase">Einspänner Archiving App</h2>
-              <h1 className="text-[#FAF6F0] text-2xl font-bold tracking-tight px-4 leading-relaxed">
-                세상에서 가장 맛있는<br />아인슈페너를 찾아서
+            <div className="flex flex-col gap-3">
+              <h2 className="text-white font-mono text-[11px] tracking-[0.2em] uppercase opacity-60">Einspänner Archiving App</h2>
+              <h1 className="text-white text-2xl font-light tracking-[-0.02em] leading-normal uppercase">
+                EINSPÄNNER ROAD
               </h1>
             </div>
 
-            <div className="w-16 h-1 bg-[#C08C5D] rounded mt-4 animate-pulse-slow"></div>
+            <div className="w-12 h-[1px] bg-white opacity-40 mt-4 animate-pulse-slow"></div>
           </div>
         </div>
       )}
 
       {/* Centered Transparent Title Header */}
-      <header className="sticky top-0 bg-[#FDFBF7]/90 backdrop-blur-md text-[#1E110B] px-4 py-4 flex items-center justify-center border-b border-[#E9E1D6]/40 z-30 min-h-[50px]">
+      <header className="sticky top-0 bg-white/90 backdrop-blur-md text-[#292929] px-4 py-4 flex items-center justify-center border-b border-[#292929] z-30 min-h-[58px]">
         {activeTab !== "home" && activeTab !== "record" && (
           <button
             onClick={() => { setActiveTab("home"); setSelectedMapCafe(null); }}
-            className="absolute left-4 p-2 hover:bg-[#FAF6F0] rounded-full transition-colors flex items-center justify-center"
+            className="absolute left-4 p-2 hover:bg-zinc-100 transition-colors flex items-center justify-center border border-transparent"
           >
-            <svg className="w-5 h-5 text-[#8B5A2B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+            <svg className="w-4 h-4 text-[#292929]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
         )}
         {activeTab === "home" && (
-          <div className="w-full flex items-center justify-between gap-3 px-2">
+          <div className="w-full flex items-center justify-between gap-3">
             {/* Sleek Search Input */}
             <div className="relative flex-1">
-              <Search className="w-3.5 h-3.5 text-[#8B5A2B] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-[#292929] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="카페 이름 또는 노트 검색"
+                placeholder="카페 이름 또는 노트 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#FAF6F0] text-xs text-[#2A1A12] pl-8 pr-3 py-2 rounded-full border border-[#E9E1D6] focus:outline-none focus:border-[#8B5A2B] placeholder-[#A59586]"
+                className="w-full bg-white text-sm text-[#292929] pl-9 pr-8 py-2 rounded-none border border-[#292929] focus:outline-none focus:bg-zinc-50 placeholder-[#7a7a7a] tracking-tight"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-zinc-200 rounded-full"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-zinc-200"
                 >
-                  <X className="w-3 h-3 text-[#8B5A2B]" />
+                  <X className="w-3 h-3 text-[#292929]" />
                 </button>
               )}
             </div>
@@ -832,20 +807,20 @@ export default function Home() {
             <button
               onClick={() => syncWithSupabase(records)}
               disabled={isSyncing}
-              className={`p-2 hover:bg-[#FAF6F0] rounded-full transition-all text-[#8B5A2B] flex items-center gap-1 border border-[#E9E1D6]/40 shrink-0 ${isSyncing ? "opacity-60 cursor-not-allowed" : ""}`}
+              className={`px-3 py-2 bg-white text-[#292929] hover:bg-[#292929] hover:text-white transition-all duration-150 border border-[#292929] shrink-0 flex items-center gap-1.5 ${isSyncing ? "opacity-60 cursor-not-allowed" : ""}`}
               title="데이터 동기화"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-              <span className="text-[9px] font-bold">동기화</span>
+              <RefreshCw className={`w-3 h-3 ${isSyncing ? "animate-spin" : ""}`} />
+              <span className="text-[10px] font-mono font-medium tracking-[0.1em] uppercase">SYNC</span>
             </button>
           </div>
         )}
         {(activeTab === "map" || activeTab === "ranking") && (
           <button
             onClick={() => { setActiveTab("home"); setSelectedMapCafe(null); }}
-            className="absolute right-4 text-xs font-bold text-[#8B5A2B] hover:bg-[#FAF6F0] px-3 py-1.5 rounded-lg transition-colors"
+            className="absolute right-4 text-xs font-mono font-medium tracking-[0.1em] uppercase bg-white text-[#292929] hover:bg-[#292929] hover:text-white border border-[#292929] px-3 py-1.5 transition-all"
           >
-            완료
+            CLOSE
           </button>
         )}
       </header>
@@ -854,26 +829,25 @@ export default function Home() {
       <main className="flex-1 pb-8 overflow-y-auto">
         {/* HOME TAB (Main stacked sections: 기록하기 -> 랭킹 -> 지도) */}
         {activeTab === "home" && (
-          <div className="flex flex-col gap-6 p-4 animate-fade-in">
+          <div className="flex flex-col gap-8 p-4 animate-fade-in">
             {/* 1. 지도 섹션 (내위치 기반) */}
-            <div className="bg-white border border-[#E9E1D6] rounded-2xl p-4 shadow-sm flex flex-col gap-3 stagger-item delay-1">
-              <div className="flex justify-between items-center border-b border-[#FAF6F0] pb-2">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-[#8B5A2B]" />
-                  <h3 className="text-xs font-extrabold text-[#2A1A12]">내 위치 기반 지도</h3>
+            <div className="bg-white border border-[#292929] p-4 flex flex-col gap-4 stagger-item delay-1">
+              <div className="flex justify-between items-center border-b border-[#292929] pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-medium tracking-[0.1em] uppercase text-[#292929]">01 / LOCATION MAP</span>
                 </div>
                 <button
                   onClick={() => setActiveTab("map")}
-                  className="text-[10px] text-[#C08C5D] flex items-center hover:underline"
+                  className="font-mono text-[10px] font-medium tracking-[0.15em] text-[#292929] uppercase hover:underline"
                 >
-                  크게 보기 <ChevronRight className="w-3 h-3" />
+                  FULL VIEW →
                 </button>
               </div>
 
               {/* Naver Map Preview Container */}
               <div
                 ref={homeMapRef}
-                className="w-full aspect-video bg-[#ECE6DC] rounded-xl overflow-hidden border border-[#E9E1D6] shadow-inner"
+                className="w-full aspect-video bg-zinc-50 overflow-hidden border border-[#292929]"
                 style={{ height: "200px" }}
               ></div>
             </div>
@@ -882,79 +856,32 @@ export default function Home() {
             <div 
               onClick={() => {
                 setActiveTab("record");
-                // Small timeout to allow activeTab tab switch to mount/render input before triggering click
                 setTimeout(() => {
                   fileInputRef.current?.click();
                 }, 50);
               }}
-              className="cursor-pointer relative overflow-hidden bg-[#2A1A12] border border-[#E9E1D6]/20 rounded-2xl py-6 px-8 text-white shadow-md active:scale-98 flex flex-row items-center justify-center gap-8 stagger-item delay-2 cta-hover"
+              className="cursor-pointer bg-white border border-[#292929] py-8 px-6 text-[#292929] hover:bg-[#292929] hover:text-white transition-all duration-200 flex flex-col items-center justify-center gap-4 stagger-item delay-2 group"
             >
-              {/* Left Side: 2D Graphic (Splash SVG) */}
-              <div className="flex items-center justify-center shrink-0">
-                <svg className="w-24 h-32 drop-shadow-xl" viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Glass Cup Outline */}
-                  <path d="M20 30 L30 130 C31 140, 40 148, 50 148 L70 148 C80 148, 89 140, 90 130 L100 30" fill="none" stroke="#E9E1D6" strokeWidth="2.5" opacity="0.35" />
-
-                  {/* Coffee Layer (Bottom) */}
-                  <path d="M26 90 L30 130 C31 135, 36 140, 42 140 L78 140 C84 140, 89 135, 90 130 L94 90 Z" fill="#2A1A12" />
-
-                  {/* Gradient blending zone (Espresso mixing with cream) */}
-                  <path d="M26 80 L94 80 L94 92 L26 92 Z" fill="url(#coffee-blend-btn)" />
-
-                  {/* Coffee top curve */}
-                  <path d="M24 70 L96 70 L94 81 L26 81 Z" fill="#4A3222" />
-
-                  {/* Thick Cream Layer (Top) */}
-                  <path d="M16 28 C16 28, 25 15, 45 18 C50 12, 70 10, 80 20 C90 15, 104 28, 104 28 L98 72 L22 72 Z" fill="#FAF6F0" />
-
-                  {/* Cream highlight details */}
-                  <path d="M30 40 C45 35, 60 38, 75 32" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-                  <path d="M40 55 C55 50, 70 52, 85 46" stroke="#E9E1D6" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
-
-                  {/* Cocoa Powder Dusting on top */}
-                  <circle cx="48" cy="18" r="2.5" fill="#5C3A21" />
-                  <circle cx="56" cy="15" r="2" fill="#8B5A2B" />
-                  <circle cx="68" cy="16" r="3" fill="#5C3A21" />
-                  <circle cx="78" cy="22" r="2" fill="#8B5A2B" />
-                  <circle cx="38" cy="24" r="2" fill="#5C3A21" />
-                  <circle cx="85" cy="26" r="1.5" fill="#8B5A2B" />
-
-                  {/* Glass Cup reflection lines */}
-                  <path d="M21 35 L29 115" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" opacity="0.3" />
-                  <path d="M99 35 L93 115" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" opacity="0.15" />
-
-                  {/* Glass Rim Highlight */}
-                  <path d="M19 30 C19 30, 60 25, 101 30" stroke="#FFFFFF" strokeWidth="1.5" opacity="0.4" />
-
-                  <defs>
-                    <linearGradient id="coffee-blend-btn" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#4A3222" />
-                      <stop offset="50%" stopColor="#8B5A2B" stopOpacity="0.8" />
-                      <stop offset="100%" stopColor="#2A1A12" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-
-              {/* Right Side: Text in two lines */}
-              <div className="flex flex-col items-start text-left">
-                <span className="text-[28px] font-bold tracking-tight text-[#FAF6F0] leading-tight">아인슈페너</span>
-                <span className="text-[28px] font-bold tracking-tight text-[#FAF6F0] leading-tight">기록하기</span>
+              <div className="font-mono text-xs font-medium tracking-[0.2em] uppercase">02 / NEW ARCHIVE</div>
+              <h2 className="text-3xl font-light tracking-[-0.03em] uppercase text-center leading-none">
+                ADD RECORD
+              </h2>
+              <div className="text-[10px] font-mono tracking-[0.1em] uppercase opacity-60 group-hover:opacity-100 transition-opacity">
+                TAP TO CAPTURE & ARCHIVE +
               </div>
             </div>
 
             {/* 3. 랜덤 추천 섹션 (좌우 슬라이드) */}
-            <div className="bg-white border border-[#E9E1D6] rounded-2xl p-4 shadow-sm flex flex-col gap-3 stagger-item delay-3">
-              <div className="flex justify-between items-center border-b border-[#FAF6F0] pb-2">
-                <div className="flex items-center gap-1.5">
-                  <Coffee className="w-4 h-4 text-[#8B5A2B]" />
-                  <h3 className="text-xs font-extrabold text-[#2A1A12]">오늘의 추천 아인슈페너</h3>
+            <div className="bg-white border border-[#292929] p-4 flex flex-col gap-4 stagger-item delay-3">
+              <div className="flex justify-between items-center border-b border-[#292929] pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-medium tracking-[0.1em] uppercase text-[#292929]">03 / RECOMMENDED</span>
                 </div>
                 <button
                   onClick={() => setActiveTab("ranking")}
-                  className="text-[10px] text-[#C08C5D] flex items-center hover:underline"
+                  className="font-mono text-[10px] font-medium tracking-[0.15em] text-[#292929] uppercase hover:underline"
                 >
-                  더보기 <ChevronRight className="w-3 h-3" />
+                  ALL LIST →
                 </button>
               </div>
 
@@ -964,27 +891,26 @@ export default function Home() {
                   <div
                     key={cafe.id}
                     onClick={() => { setSelectedMapCafe(cafe); setActiveTab("map"); }}
-                    className="w-[200px] shrink-0 snap-start bg-[#FAF6F0]/40 rounded-xl border border-[#E9E1D6]/60 overflow-hidden shadow-xs hover:border-[#C08C5D] transition-all cursor-pointer flex flex-col"
+                    className="w-[180px] shrink-0 snap-start bg-white border border-[#292929] overflow-hidden hover:bg-zinc-50 transition-colors cursor-pointer flex flex-col"
                   >
                     {/* 이미지 영역 */}
-                    <div className="w-full aspect-square bg-[#FAF6F0] border-b border-[#E9E1D6]/40 flex items-center justify-center overflow-hidden relative">
+                    <div className="w-full aspect-square bg-zinc-50 border-b border-[#292929] flex items-center justify-center overflow-hidden relative">
                       {cafe.photo ? (
-                        <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover" />
+                        <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-200" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#2A1A12] to-[#4A3222] flex items-center justify-center">
-                          <Coffee className="w-10 h-10 text-[#FAF6F0]/20" />
+                        <div className="w-full h-full bg-[#292929] flex items-center justify-center">
+                          <span className="font-mono text-[10px] tracking-[0.2em] text-white uppercase">NO IMAGE</span>
                         </div>
                       )}
                     </div>
 
-                    {/* 정보 영역 (이름, 가격, 별점만 표시) */}
-                    <div className="p-3 flex flex-col gap-1.5 justify-between flex-1">
-                      <h4 className="text-xs font-extrabold text-[#2A1A12] truncate">{cafe.place}</h4>
-                      <div className="flex items-center justify-between mt-auto">
-                        <span className="text-[10px] text-[#8B5A2B] font-mono font-bold">{cafe.price.toLocaleString()}원</span>
-                        <div className="flex items-center gap-0.5 text-amber-500 font-bold text-[10px]">
-                          <Star className="w-3 h-3 fill-amber-500" />
-                          <span>{cafe.rating.toFixed(1)}</span>
+                    {/* 정보 영역 */}
+                    <div className="p-3 flex flex-col gap-2 justify-between flex-1">
+                      <h4 className="text-xs font-semibold text-[#292929] truncate uppercase tracking-tight">{cafe.place}</h4>
+                      <div className="flex items-center justify-between mt-auto pt-1 border-t border-zinc-100">
+                        <span className="text-[10px] text-[#292929] font-mono tracking-tight">{cafe.price.toLocaleString()} KRW</span>
+                        <div className="flex items-center gap-0.5 text-[#292929] font-mono text-[10px]">
+                          <span>★ {cafe.rating.toFixed(1)}</span>
                         </div>
                       </div>
                     </div>
@@ -1124,26 +1050,25 @@ export default function Home() {
                           }
                         }, 400);
                       }}
-                      className="w-full text-xs font-bold text-zinc-900 border-none outline-none focus:ring-0 p-0 placeholder-zinc-400 bg-transparent"
+                      className="w-full text-sm text-[#292929] border-none outline-none focus:ring-0 p-0 placeholder-zinc-400 bg-transparent"
                     />
                     {isSearchingPlace && (
-                      <div className="w-4 h-4 border-2 border-[#C08C5D] border-t-transparent rounded-full animate-spin shrink-0" />
+                      <div className="w-4 h-4 border border-[#292929] border-t-transparent animate-spin shrink-0" />
                     )}
                   </div>
 
                   {/* Selected place address display */}
                   {customCoord && place && (
-                    <div className="flex items-center gap-1 pl-10 mt-0.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#8B5A2B] shrink-0" />
-                      <span className="text-[10px] text-[#8B5A2B] font-medium">
-                        위치 선택됨 ({customCoord.lat.toFixed(4)}, {customCoord.lng.toFixed(4)})
+                    <div className="flex items-center gap-1.5 pl-9 mt-1">
+                      <span className="font-mono text-[9px] text-[#292929] tracking-tight uppercase border border-[#292929] px-1 py-0.5">
+                        COORDS / {customCoord.lat.toFixed(4)}, {customCoord.lng.toFixed(4)}
                       </span>
                     </div>
                   )}
 
                   {/* Autocomplete Dropdown */}
                   {showSuggestions && placeSuggestions.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-zinc-200 rounded-2xl shadow-xl z-50 overflow-hidden max-h-64 overflow-y-auto">
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#292929] z-50 overflow-hidden max-h-64 overflow-y-auto">
                       {placeSuggestions.map((suggestion, index) => (
                         <button
                           key={index}
@@ -1157,19 +1082,18 @@ export default function Home() {
                             setPlaceSuggestions([]);
                             setShowSuggestions(false);
                           }}
-                          className="w-full text-left px-4 py-3 hover:bg-[#FAF6F0] transition-colors flex flex-col gap-0.5 border-b border-zinc-50 last:border-b-0"
+                          className="w-full text-left px-4 py-3 hover:bg-zinc-100 transition-colors flex flex-col gap-0.5 border-b border-[#292929] last:border-b-0"
                         >
                           <div className="flex items-center gap-2">
-                            <MapPin className="w-3 h-3 text-[#8B5A2B] shrink-0" />
-                            <span className="text-xs font-bold text-zinc-900 truncate">{suggestion.title}</span>
+                            <span className="text-xs font-semibold text-[#292929] truncate">{suggestion.title}</span>
                             {suggestion.category && (
-                              <span className="text-[9px] text-[#8B5A2B] bg-[#FAF6F0] border border-[#E9E1D6] px-1.5 py-0.5 rounded-full shrink-0 truncate max-w-[80px]">
+                              <span className="text-[9px] text-white bg-[#292929] px-1.5 py-0.5 shrink-0 truncate max-w-[80px] font-mono uppercase tracking-wider">
                                 {suggestion.category.split(">").pop()?.trim()}
                               </span>
                             )}
                           </div>
                           {suggestion.roadAddress && (
-                            <span className="text-[10px] text-zinc-400 pl-5 truncate">{suggestion.roadAddress}</span>
+                            <span className="text-[10px] text-zinc-400 pl-0 truncate">{suggestion.roadAddress}</span>
                           )}
                         </button>
                       ))}
@@ -1178,8 +1102,8 @@ export default function Home() {
                 </div>
 
                 {/* 2. 가격 설정 (Price) - Input Text with Numeric Keyboard */}
-                <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-100">
-                  <span className="text-xs font-bold text-zinc-800">가격 설정</span>
+                <div className="px-4 py-3 flex items-center justify-between border-b border-[#292929]">
+                  <span className="text-xs font-mono font-medium tracking-[0.1em] uppercase text-[#292929]">PRICE (KRW)</span>
                   <div className="flex items-center gap-1">
                     <input 
                       type="text"
@@ -1191,99 +1115,117 @@ export default function Home() {
                         const val = e.target.value.replace(/[^0-9]/g, "");
                         setPrice(val ? parseInt(val) : 0);
                       }}
-                      className="w-24 text-right text-xs font-mono font-bold text-zinc-900 border-none outline-none focus:ring-0 p-0 bg-transparent"
+                      className="w-24 text-right text-sm font-mono text-[#292929] border-none outline-none focus:ring-0 p-0 bg-transparent"
                     />
-                    <span className="text-xs font-bold text-zinc-500">원</span>
+                    <span className="text-xs font-mono font-medium tracking-[0.1em] text-[#292929] uppercase">KRW</span>
                   </div>
                 </div>
 
                 {/* 3. 평가 점수 (Rating) */}
-                <div className="px-4 py-3 flex items-center justify-between border-b border-zinc-100">
-                  <span className="text-xs font-bold text-zinc-800">평가 점수</span>
+                <div className="px-4 py-3 flex items-center justify-between border-b border-[#292929]">
+                  <span className="text-xs font-mono font-medium tracking-[0.1em] uppercase text-[#292929]">RATING</span>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
                         type="button"
                         onClick={() => setRating(star)}
-                        className="hover:scale-105 transition-transform"
+                        className="transition-transform active:scale-95"
                       >
-                        <Star 
-                          className={`w-5 h-5 ${star <= rating ? "fill-amber-400 text-amber-400" : "text-zinc-200"}`} 
-                        />
+                        <span className={`font-mono text-sm ${star <= rating ? "text-[#292929] font-bold" : "text-zinc-300"}`}>
+                          {star <= rating ? "★" : "☆"}
+                        </span>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 {/* 4. 크림 당도 & 질감 & 커피 베이스 (1 to 10 Button Check List) */}
-                <div className="p-4 bg-zinc-50 flex flex-col gap-4 border-b border-zinc-100">
+                <div className="p-4 bg-zinc-50 flex flex-col gap-4 border-b border-[#292929]">
                   
-                  {/* Sweetness (1-10 Buttons without numbers) */}
-                  <div className="bg-white p-3 rounded-xl border border-zinc-100 flex flex-col gap-2">
-                    <div className="flex gap-1.5 overflow-x-auto py-1 no-scrollbar justify-between">
+                  {/* Sweetness (1-10 Buttons) */}
+                  <div className="bg-white p-3 border border-[#292929] flex flex-col gap-2.5">
+                    <div className="flex gap-1 overflow-x-auto py-1 no-scrollbar justify-between">
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                         <button
                           key={num}
                           type="button"
                           onClick={() => setSweetness(num)}
-                          className={`w-7 h-7 rounded-full transition-all border shrink-0 ${sweetness === num ? "bg-[#8B5A2B] border-[#8B5A2B]" : "bg-zinc-50 border-zinc-200 hover:bg-zinc-100"}`}
-                        />
+                          className={`w-6 h-6 border ${
+                            sweetness === num 
+                              ? "bg-[#292929] border-[#292929] text-white" 
+                              : "bg-white border-[#292929] text-[#292929] hover:bg-zinc-50"
+                          } shrink-0 transition-all font-mono text-[9px] flex items-center justify-center`}
+                        >
+                          {num}
+                        </button>
                       ))}
                     </div>
-                    <div className="flex justify-between text-xs font-bold text-zinc-700 px-1 mt-1">
-                      <span>덜 단 크림</span>
-                      <span>단 크림</span>
+                    <div className="flex justify-between text-[10px] font-mono font-medium tracking-[0.1em] uppercase text-[#292929] px-0.5">
+                      <span>LESS SWEET</span>
+                      <span>MORE SWEET</span>
                     </div>
                   </div>
 
-                  {/* Texture (1-10 Buttons without numbers) */}
-                  <div className="bg-white p-3 rounded-xl border border-zinc-100 flex flex-col gap-2">
-                    <div className="flex gap-1.5 overflow-x-auto py-1 no-scrollbar justify-between">
+                  {/* Texture (1-10 Buttons) */}
+                  <div className="bg-white p-3 border border-[#292929] flex flex-col gap-2.5">
+                    <div className="flex gap-1 overflow-x-auto py-1 no-scrollbar justify-between">
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                         <button
                           key={num}
                           type="button"
                           onClick={() => setTexture(num)}
-                          className={`w-7 h-7 rounded-full transition-all border shrink-0 ${texture === num ? "bg-[#8B5A2B] border-[#8B5A2B]" : "bg-zinc-50 border-zinc-200 hover:bg-zinc-100"}`}
-                        />
+                          className={`w-6 h-6 border ${
+                            texture === num 
+                              ? "bg-[#292929] border-[#292929] text-white" 
+                              : "bg-white border-[#292929] text-[#292929] hover:bg-zinc-50"
+                          } shrink-0 transition-all font-mono text-[9px] flex items-center justify-center`}
+                        >
+                          {num}
+                        </button>
                       ))}
                     </div>
-                    <div className="flex justify-between text-xs font-bold text-zinc-700 px-1 mt-1">
-                      <span>묽음</span>
-                      <span>꾸덕함</span>
+                    <div className="flex justify-between text-[10px] font-mono font-medium tracking-[0.1em] uppercase text-[#292929] px-0.5">
+                      <span>THIN</span>
+                      <span>THICK</span>
                     </div>
                   </div>
 
-                  {/* Coffee Taste (1-10 Buttons without numbers) */}
-                  <div className="bg-white p-3 rounded-xl border border-[#E9E1D6]/30 flex flex-col gap-2">
-                    <div className="flex gap-1.5 overflow-x-auto py-1 no-scrollbar justify-between">
+                  {/* Coffee Taste (1-10 Buttons) */}
+                  <div className="bg-white p-3 border border-[#292929] flex flex-col gap-2.5">
+                    <div className="flex gap-1 overflow-x-auto py-1 no-scrollbar justify-between">
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                         <button
                           key={num}
                           type="button"
                           onClick={() => setCoffeeTaste(num)}
-                          className={`w-7 h-7 rounded-full transition-all border shrink-0 ${coffeeTaste === num ? "bg-[#8B5A2B] border-[#8B5A2B]" : "bg-zinc-50 border-zinc-200 hover:bg-zinc-100"}`}
-                        />
+                          className={`w-6 h-6 border ${
+                            coffeeTaste === num 
+                              ? "bg-[#292929] border-[#292929] text-white" 
+                              : "bg-white border-[#292929] text-[#292929] hover:bg-zinc-50"
+                          } shrink-0 transition-all font-mono text-[9px] flex items-center justify-center`}
+                        >
+                          {num}
+                        </button>
                       ))}
                     </div>
-                    <div className="flex justify-between text-xs font-bold text-zinc-700 px-1 mt-1">
-                      <span>산미</span>
-                      <span>고소</span>
+                    <div className="flex justify-between text-[10px] font-mono font-medium tracking-[0.1em] uppercase text-[#292929] px-0.5">
+                      <span>ACIDIC</span>
+                      <span>NUTTY</span>
                     </div>
                   </div>
 
                 </div>
 
                 {/* 6. 맛 한줄평 (Notes) */}
-                <div className="p-4 flex flex-col gap-1.5 border-b border-zinc-100">
-                  <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">한줄평</label>
+                <div className="p-4 flex flex-col gap-2 border-b border-[#292929]">
+                  <label className="text-[10px] font-mono font-medium tracking-[0.1em] uppercase text-[#292929]">NOTES</label>
                   <textarea
                     rows={2}
                     placeholder="ex) 크림에서 약간의 오렌지 향이 남"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full text-xs text-zinc-600 border border-zinc-100 rounded-xl p-2.5 outline-none resize-none placeholder-zinc-400"
+                    className="w-full text-xs text-[#292929] border border-[#292929] rounded-none p-3 outline-none resize-none placeholder-zinc-400 focus:bg-zinc-50"
                   />
                 </div>
 
@@ -1291,14 +1233,18 @@ export default function Home() {
             </div>
             
             {/* Fixed Complete Button at Bottom */}
-            <div className="p-4 bg-white border-t border-zinc-100 shrink-0 z-10">
+            <div className="p-4 bg-white border-t border-[#292929] shrink-0 z-10">
               <button
                 type="button"
                 onClick={handleAddRecord}
                 disabled={!place.trim()}
-                className={`w-full text-center text-xs font-bold py-3.5 rounded-xl shadow-xs transition-colors ${place.trim() ? "bg-zinc-900 text-white hover:bg-zinc-800" : "bg-zinc-100 text-zinc-300 cursor-not-allowed"}`}
+                className={`w-full text-center text-xs font-mono font-medium tracking-[0.15em] py-4 uppercase border transition-all duration-150 ${
+                  place.trim() 
+                    ? "bg-white text-[#292929] border-[#292929] hover:bg-[#292929] hover:text-white cursor-pointer" 
+                    : "bg-zinc-100 text-zinc-300 border-zinc-200 cursor-not-allowed"
+                }`}
               >
-                완료
+                SUBMIT RECORD +
               </button>
             </div>
           </div>
@@ -1338,79 +1284,82 @@ export default function Home() {
                         <span className="w-1 h-1 bg-zinc-300 rounded-full"></span>
                         <span className="text-[10px] text-[#8B5A2B] font-mono">{selectedMapCafe.price.toLocaleString()}원</span>
                         {selectedMapCafe.distance && (
-                          <>
-                            <span className="w-1 h-1 bg-zinc-300 rounded-full"></span>
-                            <span className="text-[9px] text-blue-500 font-bold">
-                              {(selectedMapCafe.distance / 1000).toFixed(2)}km
-                            </span>
-                          </>
+                          <span className="text-[10px] text-[#292929] font-mono">
+                            {(selectedMapCafe.distance / 1000).toFixed(2)}km
+                          </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-4">
                       {/* 크림 당도 */}
-                      <div className="bg-[#FAF6F0] p-4 rounded-2xl border border-[#E9E1D6] flex flex-col gap-2.5">
-                        <div className="flex gap-1.5 justify-between">
+                      <div className="bg-white p-4 border border-[#292929] flex flex-col gap-2.5">
+                        <div className="flex gap-1 justify-between">
                           {Array.from({ length: 10 }).map((_, i) => (
                             <div
                               key={i}
-                              className={`w-7 h-7 rounded-full border ${
+                              className={`w-6 h-6 border ${
                                 i === normalizeVal(selectedMapCafe.sweetness, selectedMapCafe.id) - 1
-                                  ? "bg-[#8B5A2B] border-[#8B5A2B]"
-                                  : "bg-white border-zinc-200"
-                              }`}
-                            />
+                                  ? "bg-[#292929] border-[#292929]"
+                                  : "bg-white border-[#292929]"
+                              } flex items-center justify-center font-mono text-[9px] ${i === normalizeVal(selectedMapCafe.sweetness, selectedMapCafe.id) - 1 ? "text-white" : "text-[#292929]"}`}
+                            >
+                              {i + 1}
+                            </div>
                           ))}
                         </div>
-                        <div className="flex justify-between text-xs font-bold text-zinc-700 px-1">
-                          <span>덜 단 크림</span>
-                          <span>단 크림</span>
+                        <div className="flex justify-between text-[10px] font-mono font-medium tracking-[0.1em] uppercase text-[#292929] px-0.5">
+                          <span>LESS SWEET</span>
+                          <span>MORE SWEET</span>
                         </div>
                       </div>
 
                       {/* 크림 질감 */}
-                      <div className="bg-[#FAF6F0] p-4 rounded-2xl border border-[#E9E1D6] flex flex-col gap-2.5">
-                        <div className="flex gap-1.5 justify-between">
+                      <div className="bg-white p-4 border border-[#292929] flex flex-col gap-2.5">
+                        <div className="flex gap-1 justify-between">
                           {Array.from({ length: 10 }).map((_, i) => (
                             <div
                               key={i}
-                              className={`w-7 h-7 rounded-full border ${
+                              className={`w-6 h-6 border ${
                                 i === normalizeVal(selectedMapCafe.texture, selectedMapCafe.id) - 1
-                                  ? "bg-[#8B5A2B] border-[#8B5A2B]"
-                                  : "bg-white border-zinc-200"
-                              }`}
-                            />
+                                  ? "bg-[#292929] border-[#292929]"
+                                  : "bg-white border-[#292929]"
+                              } flex items-center justify-center font-mono text-[9px] ${i === normalizeVal(selectedMapCafe.texture, selectedMapCafe.id) - 1 ? "text-white" : "text-[#292929]"}`}
+                            >
+                              {i + 1}
+                            </div>
                           ))}
                         </div>
-                        <div className="flex justify-between text-xs font-bold text-zinc-700 px-1">
-                          <span>묽음</span>
-                          <span>꾸덕함</span>
+                        <div className="flex justify-between text-[10px] font-mono font-medium tracking-[0.1em] uppercase text-[#292929] px-0.5">
+                          <span>THIN</span>
+                          <span>THICK</span>
                         </div>
                       </div>
 
                       {/* 커피 맛 */}
-                      <div className="bg-[#FAF6F0] p-4 rounded-2xl border border-[#E9E1D6] flex flex-col gap-2.5">
-                        <div className="flex gap-1.5 justify-between">
+                      <div className="bg-white p-4 border border-[#292929] flex flex-col gap-2.5">
+                        <div className="flex gap-1 justify-between">
                           {Array.from({ length: 10 }).map((_, i) => (
                             <div
                               key={i}
-                              className={`w-7 h-7 rounded-full border ${
+                              className={`w-6 h-6 border ${
                                 i === normalizeVal(selectedMapCafe.coffeeTaste, selectedMapCafe.id) - 1
-                                  ? "bg-[#8B5A2B] border-[#8B5A2B]"
-                                  : "bg-white border-zinc-200"
-                              }`}
-                            />
+                                  ? "bg-[#292929] border-[#292929]"
+                                  : "bg-white border-[#292929]"
+                              } flex items-center justify-center font-mono text-[9px] ${i === normalizeVal(selectedMapCafe.coffeeTaste, selectedMapCafe.id) - 1 ? "text-white" : "text-[#292929]"}`}
+                            >
+                              {i + 1}
+                            </div>
                           ))}
                         </div>
-                        <div className="flex justify-between text-xs font-bold text-zinc-700 px-1">
-                          <span>산미</span>
-                          <span>고소</span>
+                        <div className="flex justify-between text-[10px] font-mono font-medium tracking-[0.1em] uppercase text-[#292929] px-0.5">
+                          <span>ACIDIC</span>
+                          <span>NUTTY</span>
                         </div>
                       </div>
                     </div>
 
-                    <p className="text-[10px] text-[#7A6A5E] bg-zinc-50 p-2.5 rounded-lg border border-[#F0E6D8] leading-relaxed">
+                    <p className="text-[11px] text-[#292929] bg-zinc-50 p-3 border border-[#292929] leading-relaxed">
                       {selectedMapCafe.notes}
                     </p>
                   </div>
@@ -1419,7 +1368,7 @@ export default function Home() {
                 {/* 3. 지도 작게 */}
                 <div
                   ref={mapRef}
-                  className="w-full bg-[#ECE6DC] rounded-2xl overflow-hidden border border-[#E9E1D6] shadow-inner select-none"
+                  className="w-full bg-zinc-100 overflow-hidden border border-[#292929] select-none"
                   style={{ height: "180px" }}
                 />
               </>
@@ -1448,117 +1397,114 @@ export default function Home() {
         {/* RANKING TAB */}
         {activeTab === "ranking" && (
           <div className="p-4 animate-fade-in flex flex-col gap-4">
-            <div className="border-b border-[#E9E1D6] pb-2 flex justify-between items-end">
+            <div className="border-b border-[#292929] pb-3 flex justify-between items-end">
               <div>
-                <h2 className="text-xs font-bold text-[#2A1A12]">아인슈페너 맛집 랭킹</h2>
-                <p className="text-[9px] text-[#8B5A2B]">내 취향 필터별 순위를 바로 확인해 보세요.</p>
+                <span className="font-mono text-[10px] font-medium tracking-[0.1em] uppercase text-[#292929] block mb-1">03 / RANKINGS</span>
+                <h2 className="text-xl font-light tracking-[-0.02em] uppercase text-[#292929]">EINSPÄNNER TOP LIST</h2>
               </div>
               <button
                 onClick={fetchCurrentLocation}
-                className={`flex items-center gap-1 text-[9px] bg-[#4A3525] text-[#FAF6F0] px-2 py-1 rounded-full border border-[#5C4535] transition-all hover:bg-[#5C4535] active:scale-95 ${isGettingLocation ? "animate-pulse" : ""}`}
+                className={`flex items-center gap-1.5 text-[9px] font-mono font-medium tracking-[0.1em] uppercase bg-white text-[#292929] hover:bg-[#292929] hover:text-white px-3 py-1.5 border border-[#292929] transition-all duration-150 ${isGettingLocation ? "animate-pulse" : ""}`}
               >
-                <Navigation className="w-2.5 h-2.5 text-[#C08C5D] fill-[#C08C5D]" />
-                <span>내위치 갱신</span>
+                <Navigation className="w-2.5 h-2.5" />
+                <span>GPS UPDATE</span>
               </button>
             </div>
 
             {/* Filters Horizontal Chips */}
-            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <div className="flex gap-1 overflow-x-auto pb-1.5 no-scrollbar border-b border-[#292929]">
               <button
                 onClick={() => setRankingFilter("rating")}
-                className={`text-[10px] font-bold px-3 py-1.5 rounded-full shrink-0 transition-colors border ${rankingFilter === "rating" ? "bg-[#2A1A12] text-[#FAF6F0] border-[#2A1A12]" : "bg-white text-[#8B5A2B] border-[#E9E1D6] hover:bg-[#FAF6F0]"}`}
+                className={`text-[9px] font-mono font-medium tracking-[0.1em] uppercase px-3 py-1.5 border shrink-0 transition-all duration-150 ${rankingFilter === "rating" ? "bg-[#292929] text-white border-[#292929]" : "bg-white text-[#292929] border-[#292929] hover:bg-zinc-50"}`}
               >
-                전체 평점 순 ⭐
+                RATING ★
               </button>
               <button
                 onClick={() => setRankingFilter("cream-sweet")}
-                className={`text-[10px] font-bold px-3 py-1.5 rounded-full shrink-0 transition-colors border ${rankingFilter === "cream-sweet" ? "bg-[#2A1A12] text-[#FAF6F0] border-[#2A1A12]" : "bg-white text-[#8B5A2B] border-[#E9E1D6] hover:bg-[#FAF6F0]"}`}
+                className={`text-[9px] font-mono font-medium tracking-[0.1em] uppercase px-3 py-1.5 border shrink-0 transition-all duration-150 ${rankingFilter === "cream-sweet" ? "bg-[#292929] text-white border-[#292929]" : "bg-white text-[#292929] border-[#292929] hover:bg-zinc-50"}`}
               >
-                크림 달달 순 🍯
+                SWEETNESS 🍯
               </button>
               <button
                 onClick={() => setRankingFilter("cream-texture")}
-                className={`text-[10px] font-bold px-3 py-1.5 rounded-full shrink-0 transition-colors border ${rankingFilter === "cream-texture" ? "bg-[#2A1A12] text-[#FAF6F0] border-[#2A1A12]" : "bg-white text-[#8B5A2B] border-[#E9E1D6] hover:bg-[#FAF6F0]"}`}
+                className={`text-[9px] font-mono font-medium tracking-[0.1em] uppercase px-3 py-1.5 border shrink-0 transition-all duration-150 ${rankingFilter === "cream-texture" ? "bg-[#292929] text-white border-[#292929]" : "bg-white text-[#292929] border-[#292929] hover:bg-zinc-50"}`}
               >
-                크림 꾸덕 순 🍰
+                TEXTURE 🍰
               </button>
               <button
                 onClick={() => setRankingFilter("coffee-taste")}
-                className={`text-[10px] font-bold px-3 py-1.5 rounded-full shrink-0 transition-colors border ${rankingFilter === "coffee-taste" ? "bg-[#2A1A12] text-[#FAF6F0] border-[#2A1A12]" : "bg-white text-[#8B5A2B] border-[#E9E1D6] hover:bg-[#FAF6F0]"}`}
+                className={`text-[9px] font-mono font-medium tracking-[0.1em] uppercase px-3 py-1.5 border shrink-0 transition-all duration-150 ${rankingFilter === "coffee-taste" ? "bg-[#292929] text-white border-[#292929]" : "bg-white text-[#292929] border-[#292929] hover:bg-zinc-50"}`}
               >
-                고소한 커피 순 ☕
+                BASE TASTE ☕
               </button>
               <button
                 onClick={() => setRankingFilter("price")}
-                className={`text-[10px] font-bold px-3 py-1.5 rounded-full shrink-0 transition-colors border ${rankingFilter === "price" ? "bg-[#2A1A12] text-[#FAF6F0] border-[#2A1A12]" : "bg-white text-[#8B5A2B] border-[#E9E1D6] hover:bg-[#FAF6F0]"}`}
+                className={`text-[9px] font-mono font-medium tracking-[0.1em] uppercase px-3 py-1.5 border shrink-0 transition-all duration-150 ${rankingFilter === "price" ? "bg-[#292929] text-white border-[#292929]" : "bg-white text-[#292929] border-[#292929] hover:bg-zinc-50"}`}
               >
-                가성비(최저가) 순 💸
+                LOWEST PRICE 💸
               </button>
               <button
                 onClick={() => setRankingFilter("distance")}
-                className={`text-[10px] font-bold px-3 py-1.5 rounded-full shrink-0 transition-colors border ${rankingFilter === "distance" ? "bg-[#2A1A12] text-[#FAF6F0] border-[#2A1A12]" : "bg-white text-[#8B5A2B] border-[#E9E1D6] hover:bg-[#FAF6F0]"}`}
+                className={`text-[9px] font-mono font-medium tracking-[0.1em] uppercase px-3 py-1.5 border shrink-0 transition-all duration-150 ${rankingFilter === "distance" ? "bg-[#292929] text-white border-[#292929]" : "bg-white text-[#292929] border-[#292929] hover:bg-zinc-50"}`}
               >
-                가까운 순 📍
+                NEAREST 📍
               </button>
             </div>
 
             {/* Rankings List */}
-            <div className="flex flex-col gap-3 mt-1">
+            <div className="flex flex-col gap-4 mt-1">
               {getSortedRankings().map((cafe, index) => {
-                const isTopThree = index < 3;
-                const medalColors = ["bg-amber-400 text-white font-black", "bg-zinc-400 text-white font-black", "bg-amber-700 text-white font-black"];
-
+                const displayNum = String(index + 1).padStart(2, '0');
                 return (
                   <div
                     key={cafe.id}
-                    className={`bg-white border border-[#E9E1D6] rounded-2xl p-4 flex gap-3 shadow-xs hover:border-[#C08C5D] transition-colors relative ${isTopThree ? "ring-1 ring-amber-500/10" : ""}`}
+                    className="bg-white border border-[#292929] p-4 flex gap-4 relative"
                   >
-                    <div className={`absolute top-3 left-3 w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${isTopThree ? medalColors[index] : "bg-zinc-100 text-[#8B5A2B] font-bold"}`}>
-                      {index + 1}
+                    {/* Index Rank Number */}
+                    <div className="absolute top-4 left-4 w-6 h-6 border border-[#292929] bg-white flex items-center justify-center font-mono text-[10px] text-[#292929] font-bold z-10">
+                      {displayNum}
                     </div>
 
-                    <div className="pl-6 flex gap-3 w-full">
-                      <div className="w-16 h-16 rounded-xl bg-[#FAF6F0] border border-[#E9E1D6] flex items-center justify-center overflow-hidden shrink-0">
+                    <div className="pl-8 flex gap-4 w-full">
+                      {/* Image Frame */}
+                      <div className="w-16 h-16 bg-zinc-50 border border-[#292929] flex items-center justify-center overflow-hidden shrink-0">
                         {cafe.photo ? (
-                          <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover" />
+                          <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover grayscale" />
                         ) : (
-                          <Coffee className="w-7 h-7 text-[#C08C5D]" />
+                          <span className="font-mono text-[8px] tracking-tight text-zinc-400">NO IMG</span>
                         )}
                       </div>
 
                       <div className="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
                           <div className="flex items-center justify-between gap-1">
-                            <h4 className="text-xs font-bold text-[#2A1A12] truncate">{cafe.place}</h4>
-                            <span className="text-[9px] text-[#A59586] font-mono shrink-0">
-                              {cafe.price.toLocaleString()}원
+                            <h4 className="text-xs font-semibold text-[#292929] truncate uppercase tracking-tight">{cafe.place}</h4>
+                            <span className="text-[10px] text-[#292929] font-mono shrink-0">
+                              {cafe.price.toLocaleString()} KRW
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <div className="flex items-center gap-0.5 text-amber-500 font-bold text-[10px]">
-                              <Star className="w-3 h-3 fill-amber-500" />
-                              <span>{cafe.rating.toFixed(1)}</span>
-                            </div>
-                            <span className="w-1 h-1 bg-zinc-200 rounded-full"></span>
-                            <span className="text-[9px] text-[#8B5A2B]">
-                              {rankingFilter === "cream-sweet" ? `당도 ${cafe.sweetness}/5` :
-                                rankingFilter === "cream-texture" ? `질감 ${cafe.texture}/5` :
-                                  rankingFilter === "coffee-taste" ? `고소함 ${cafe.coffeeTaste}/5` :
-                                    `달달 ${cafe.sweetness} • 꾸덕 ${cafe.texture}`}
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-[#292929] font-mono">★ {cafe.rating.toFixed(1)}</span>
+                            <span className="text-[10px] text-zinc-300">|</span>
+                            <span className="text-[9px] text-[#292929] font-mono uppercase tracking-tight">
+                              {rankingFilter === "cream-sweet" ? `SWEET: ${cafe.sweetness}/10` :
+                                rankingFilter === "cream-texture" ? `THICK: ${cafe.texture}/10` :
+                                  rankingFilter === "coffee-taste" ? `NUTTY: ${cafe.coffeeTaste}/10` :
+                                    `SWT: ${cafe.sweetness} / TCK: ${cafe.texture}`}
                             </span>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-dashed border-[#FAF6F0]">
-                          <span className="text-[8px] text-zinc-400">
-                            {cafe.distance ? `내 위치에서 ${(cafe.distance / 1000).toFixed(2)}km` : "거리 측정 불가"}
+                        <div className="flex items-center justify-between mt-3 pt-2 border-t border-[#292929] border-dashed">
+                          <span className="text-[9px] text-zinc-400 font-mono uppercase">
+                            {cafe.distance ? `DIST / ${(cafe.distance / 1000).toFixed(2)} KM` : "DIST / UNKNOWN"}
                           </span>
                           <button
                             onClick={() => { setSelectedMapCafe(cafe); setActiveTab("map"); }}
-                            className="text-[9px] text-[#C08C5D] font-bold flex items-center hover:underline"
+                            className="text-[9px] text-[#292929] font-mono tracking-[0.1em] uppercase font-bold flex items-center hover:underline"
                           >
-                            지도 <ChevronRight className="w-3.5 h-3.5" />
+                            MAP VIEW →
                           </button>
                         </div>
                       </div>
