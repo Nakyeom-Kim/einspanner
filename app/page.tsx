@@ -36,65 +36,8 @@ interface EinspannerRecord {
   createdAt: string;
 }
 
-// Real Seoul Einspanner cafe data with actual GPS coordinates
-const INITIAL_CAFES: EinspannerRecord[] = [
-  {
-    id: "oats_yongsan",
-    place: "오츠커피 용산점",
-    photo: "",
-    price: 5500,
-    sweetness: 4,
-    texture: 5,
-    coffeeTaste: 4,
-    notes: "서울 3대 아인슈페너 맛집! 꾸덕하고 묵직하게 올라간 크림 위에 귀여운 초코칩이 올라가요. 나무 스틱으로 크림을 먼저 퍼먹다가 나중에 섞어 마시는 걸 추천합니다. 서울 용산구 원효로89길 13-12.",
-    rating: 4.8,
-    lat: 37.5385,
-    lng: 126.9658,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "archivist_seochon",
-    place: "아키비스트 서촌",
-    photo: "",
-    price: 7000,
-    sweetness: 3,
-    texture: 5,
-    coffeeTaste: 4,
-    notes: "서촌 고즈넉한 골목에 위치한 감성 카페. 쫀쫀하고 밀도 높은 크림으로 정평이 나 있으며 평일에도 웨이팅이 있을 만큼 인기. 서울 종로구 효자로13길 52.",
-    rating: 4.7,
-    lat: 37.5818,
-    lng: 126.9734,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "taeyang_bangbae",
-    place: "태양커피 방배",
-    photo: "",
-    price: 6500,
-    sweetness: 2,
-    texture: 4,
-    coffeeTaste: 5,
-    notes: "아메리카노·카페라떼·콜드브루 중 베이스를 고를 수 있어 내 취향에 맞는 아인슈페너를 즐길 수 있어요. 쌉싸름한 커피 베이스와 달지 않은 크림의 균형이 매력. 서울 서초구 방배동.",
-    rating: 4.6,
-    lat: 37.4813,
-    lng: 126.9830,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "dongkyung_independence",
-    place: "커피가게동경 독립문점",
-    photo: "",
-    price: 6000,
-    sweetness: 3,
-    texture: 4,
-    coffeeTaste: 5,
-    notes: "묵직한 바디감의 핸드드립 베이스 아인슈페너로 유명한 곳. 기존 망원점이 독립문 인근으로 이전. 커피 본연의 깊은 향과 꾸덕한 크림이 잘 어우러집니다. 서울 종로구 통일로12길 16-1.",
-    rating: 4.5,
-    lat: 37.5746,
-    lng: 126.9583,
-    createdAt: new Date().toISOString()
-  }
-];
+// Real Seoul Einspanner cafe data with actual GPS coordinates (Default empty, only user created)
+const INITIAL_CAFES: EinspannerRecord[] = [];
 
 // Helper to normalize mock data (1-5 scale) to form data (1-10 scale)
 const normalizeVal = (val: number, id: string) => {
@@ -580,13 +523,19 @@ export default function Home() {
 
     // Cafe Markers
     records.forEach(cafe => {
+      // 장소명이 '기억안남' 또는 '기억 안남' 등일 경우 지도 핀에서 배제
+      const isForgotten = cafe.place.replace(/\s/g, "").includes("기억안남");
+      if (isForgotten) return;
+
       new naver.maps.Marker({
         position: new naver.maps.LatLng(cafe.lat, cafe.lng),
         map: map,
         icon: {
           content: `
-            <div class="w-5 h-5 bg-[#8B5A2B] rounded-full border border-white shadow flex items-center justify-center">
-              <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
+            <div class="relative flex items-center justify-center">
+              <div class="w-5 h-5 bg-white text-[#292929] border border-[#292929] flex items-center justify-center font-mono text-[8px] font-bold">
+                ☕
+              </div>
             </div>
           `,
           anchor: new naver.maps.Point(10, 10)
@@ -643,6 +592,10 @@ export default function Home() {
 
     // Cafe Markers
     records.forEach(cafe => {
+      // 장소명이 '기억안남' 또는 '기억 안남' 등일 경우 지도 핀에서 배제
+      const isForgotten = cafe.place.replace(/\s/g, "").includes("기억안남");
+      if (isForgotten) return;
+
       const isSelected = selectedMapCafe && selectedMapCafe.id === cafe.id;
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(cafe.lat, cafe.lng),
@@ -896,7 +849,7 @@ export default function Home() {
                     {/* 이미지 영역 */}
                     <div className="w-full aspect-square bg-zinc-50 border-b border-[#292929] flex items-center justify-center overflow-hidden relative">
                       {cafe.photo ? (
-                        <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-200" />
+                        <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-[#292929] flex items-center justify-center">
                           <span className="font-mono text-[10px] tracking-[0.2em] text-white uppercase">NO IMAGE</span>
@@ -1469,7 +1422,7 @@ export default function Home() {
                       {/* Image Frame */}
                       <div className="w-16 h-16 bg-zinc-50 border border-[#292929] flex items-center justify-center overflow-hidden shrink-0">
                         {cafe.photo ? (
-                          <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover grayscale" />
+                          <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover" />
                         ) : (
                           <span className="font-mono text-[8px] tracking-tight text-zinc-400">NO IMG</span>
                         )}

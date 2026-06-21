@@ -111,7 +111,8 @@
 }
 
 @layer base {
-  * {
+  /* 네이버 지도 내부 요소들을 제외한 모든 요소에만 스타일 강제 적용 */
+  *:not([class*="naver"]):not([id*="naver"]):not([class*="nmap"]):not(.nmap_container) *:not([class*="naver"]):not([id*="naver"]) {
     border-color: #292929 !important;
     border-radius: 0px !important;
     box-shadow: none !important;
