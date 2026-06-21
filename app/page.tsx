@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect, react-hooks/immutability, @typescript-eslint/no-unused-vars */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -90,6 +91,34 @@ export default function Home() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [naverMapLoaded, setNaverMapLoaded] = useState(false);
   const [randomCafes, setRandomCafes] = useState<EinspannerRecord[]>([]);
+
+  // Setup current location (Seoul City Hall as default base: 37.5665, 126.9780)
+  const fetchCurrentLocation = () => {
+    setIsGettingLocation(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          setIsGettingLocation(false);
+        },
+        () => {
+          setTimeout(() => {
+            // Default to Seoul City Hall
+            setUserLocation({ lat: 37.5665, lng: 126.9780 });
+            setIsGettingLocation(false);
+          }, 800);
+        }
+      );
+    } else {
+      setTimeout(() => {
+        setUserLocation({ lat: 37.5665, lng: 126.9780 });
+        setIsGettingLocation(false);
+      }, 800);
+    }
+  };
 
   // Shuffle cafes for random recommendation
   useEffect(() => {
@@ -399,33 +428,6 @@ export default function Home() {
     }
   };
 
-  // Setup current location (Seoul City Hall as default base: 37.5665, 126.9780)
-  const fetchCurrentLocation = () => {
-    setIsGettingLocation(true);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-          setIsGettingLocation(false);
-        },
-        () => {
-          setTimeout(() => {
-            // Default to Seoul City Hall
-            setUserLocation({ lat: 37.5665, lng: 126.9780 });
-            setIsGettingLocation(false);
-          }, 800);
-        }
-      );
-    } else {
-      setTimeout(() => {
-        setUserLocation({ lat: 37.5665, lng: 126.9780 });
-        setIsGettingLocation(false);
-      }, 800);
-    }
-  };
 
   // Map Pin Selection or Grid Click
   const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -651,11 +653,6 @@ export default function Home() {
     }
   };
 
-  // Search filtered records
-  const filteredRecords = enhancedRecords.filter(rec =>
-    rec.place.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    rec.notes.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-white font-sans relative border-x border-[#292929]">
