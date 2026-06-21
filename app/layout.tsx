@@ -24,7 +24,7 @@ export default function RootLayout({
           {children}
         </div>
         <Script
-          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}`}
+          src={`https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=geocoder`}
           strategy="beforeInteractive"
         />
       </body>

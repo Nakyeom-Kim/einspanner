@@ -33,62 +33,62 @@ interface EinspannerRecord {
   createdAt: string;
 }
 
-// Initial mock data with real Seoul coordinates for Naver Maps
+// Real Seoul Einspanner cafe data with actual GPS coordinates
 const INITIAL_CAFES: EinspannerRecord[] = [
   {
-    id: "oats",
-    place: "오츠커피 마포점 (Oats Coffee)",
+    id: "oats_yongsan",
+    place: "오츠커피 용산점",
     photo: "",
     price: 5500,
     sweetness: 4,
     texture: 5,
     coffeeTaste: 4,
-    notes: "서울 3대 아인슈페너 맛집! 쫀쫀하고 묵직하게 올라간 크림 위에 귀여운 초코칩이 매력적이에요. 스푼으로 크림을 퍼먹다가 나중에 섞어 마시는 것을 추천합니다.",
+    notes: "서울 3대 아인슈페너 맛집! 꾸덕하고 묵직하게 올라간 크림 위에 귀여운 초코칩이 올라가요. 나무 스틱으로 크림을 먼저 퍼먹다가 나중에 섞어 마시는 걸 추천합니다. 서울 용산구 원효로89길 13-12.",
     rating: 4.8,
-    lat: 37.5381,
-    lng: 126.9632,
+    lat: 37.5385,
+    lng: 126.9658,
     createdAt: new Date().toISOString()
   },
   {
-    id: "milestone",
-    place: "마일스톤 커피 신사점 (Milestone)",
+    id: "archivist_seochon",
+    place: "아키비스트 서촌",
     photo: "",
-    price: 6300,
-    sweetness: 2,
-    texture: 3,
-    coffeeTaste: 5,
-    notes: "가로수길의 터줏대감. 너무 달지 않은 부드러운 우유 크림과 산미 없이 쌉싸름하고 엄청나게 고소한 에스프레소 베이스의 밸런스가 정말 훌륭합니다.",
-    rating: 4.9,
-    lat: 37.5204,
-    lng: 127.0229,
+    price: 7000,
+    sweetness: 3,
+    texture: 5,
+    coffeeTaste: 4,
+    notes: "서촌 고즈넉한 골목에 위치한 감성 카페. 쫀쫀하고 밀도 높은 크림으로 정평이 나 있으며 평일에도 웨이팅이 있을 만큼 인기. 서울 종로구 효자로13길 52.",
+    rating: 4.7,
+    lat: 37.5818,
+    lng: 126.9734,
     createdAt: new Date().toISOString()
   },
   {
-    id: "architeuthis",
-    place: "아키텍처스 카페 홍대 (Architeuthis)",
+    id: "taeyang_bangbae",
+    place: "태양커피 방배",
+    photo: "",
+    price: 6500,
+    sweetness: 2,
+    texture: 4,
+    coffeeTaste: 5,
+    notes: "아메리카노·카페라떼·콜드브루 중 베이스를 고를 수 있어 내 취향에 맞는 아인슈페너를 즐길 수 있어요. 쌉싸름한 커피 베이스와 달지 않은 크림의 균형이 매력. 서울 서초구 방배동.",
+    rating: 4.6,
+    lat: 37.4813,
+    lng: 126.9830,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "dongkyung_independence",
+    place: "커피가게동경 독립문점",
     photo: "",
     price: 6000,
     sweetness: 3,
     texture: 4,
-    coffeeTaste: 3,
-    notes: "힙한 분위기에서 즐기는 쫀쫀하고 달콤한 정석 아인슈페너. 커피 원두 선택이 가능하며 고소한 맛 크림과 아주 잘 어울려요.",
+    coffeeTaste: 5,
+    notes: "묵직한 바디감의 핸드드립 베이스 아인슈페너로 유명한 곳. 기존 망원점이 독립문 인근으로 이전. 커피 본연의 깊은 향과 꾸덕한 크림이 잘 어우러집니다. 서울 종로구 통일로12길 16-1.",
     rating: 4.5,
-    lat: 37.5562,
-    lng: 126.9242,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "taegeukdang",
-    place: "태극당 동대입구 본점",
-    photo: "",
-    price: 5800,
-    sweetness: 5,
-    texture: 2,
-    coffeeTaste: 2,
-    notes: "옛 감성이 살아있는 부드럽고 달달함이 극대화된 아인슈페너. 묽은 형태의 크림이 부드럽게 넘어가며 당 충전에 최고입니다.",
-    rating: 4.1,
-    lat: 37.5593,
-    lng: 127.0044,
+    lat: 37.5746,
+    lng: 126.9583,
     createdAt: new Date().toISOString()
   }
 ];
@@ -119,6 +119,20 @@ export default function Home() {
   const [photo, setPhoto] = useState<string>("");
   const [customCoord, setCustomCoord] = useState<{ lat: number; lng: number } | null>(null);
 
+  // Place search autocomplete states
+  interface PlaceSuggestion {
+    title: string;
+    address: string;
+    roadAddress: string;
+    category: string;
+    lat: number;
+    lng: number;
+  }
+  const [placeSuggestions, setPlaceSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [isSearchingPlace, setIsSearchingPlace] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Map States
   const [selectedMapCafe, setSelectedMapCafe] = useState<EinspannerRecord | null>(null);
   const [temporaryPin, setTemporaryPin] = useState<{ lat: number; lng: number } | null>(null);
@@ -144,16 +158,23 @@ export default function Home() {
       setShowSplash(false);
     }, 2800);
 
+    // Version-based data reset: if version changed, clear old data and load fresh
+    const DATA_VERSION = "v2_real_cafes";
+    const savedVersion = localStorage.getItem("einspanner_data_version");
     const saved = localStorage.getItem("einspanner_records");
-    if (saved) {
+
+    if (savedVersion !== DATA_VERSION || !saved) {
+      // New version or no data: load fresh INITIAL_CAFES
+      setRecords(INITIAL_CAFES);
+      localStorage.setItem("einspanner_records", JSON.stringify(INITIAL_CAFES));
+      localStorage.setItem("einspanner_data_version", DATA_VERSION);
+    } else {
       try {
         setRecords(JSON.parse(saved));
       } catch (e) {
         setRecords(INITIAL_CAFES);
+        localStorage.setItem("einspanner_records", JSON.stringify(INITIAL_CAFES));
       }
-    } else {
-      setRecords(INITIAL_CAFES);
-      localStorage.setItem("einspanner_records", JSON.stringify(INITIAL_CAFES));
     }
 
     // Try to fetch location on mount
@@ -275,6 +296,8 @@ export default function Home() {
     setPhoto("");
     setCustomCoord(null);
     setTemporaryPin(null);
+    setPlaceSuggestions([]);
+    setShowSuggestions(false);
 
     // Go to map and select the newly added cafe to open its drawer details
     setSelectedMapCafe(newRecord);
@@ -791,7 +814,7 @@ export default function Home() {
               {/* Form Fields Section (Ordered: Place, Price, Rating, Cream, Coffee) */}
               <div className="flex flex-col divider-y divider-zinc-100">
                 
-                {/* 1. 장소명 (Place Name) - Autocomplete without label */}
+                {/* 1. 장소명 (Place Name) - Naver Local Search API Autocomplete */}
                 <div className="p-4 flex flex-col gap-1 border-b border-zinc-100 relative">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center shrink-0 border border-zinc-200">
@@ -800,45 +823,90 @@ export default function Home() {
                     <input
                       type="text"
                       required
-                      placeholder="상호명을 입력하면 주소지 추천..."
+                      autoComplete="off"
+                      placeholder="카페 이름을 입력하세요..."
                       value={place}
+                      onFocus={() => { if (placeSuggestions.length > 0) setShowSuggestions(true); }}
+                      onBlur={() => { setTimeout(() => setShowSuggestions(false), 150); }}
                       onChange={(e) => {
-                        setPlace(e.target.value);
-                        // Simulate Naver Local search recommendations based on input
-                        if (e.target.value.trim().length > 1) {
-                          const naver = (window as any).naver;
-                          // Fallback search suggestions logic
-                          const mockSuggestions = [
-                            "오츠커피 마포점 (Oats)",
-                            "마일스톤 커피 신사점 (Milestone)",
-                            "아키텍처스 카페 홍대 (Architeuthis)",
-                            "태극당 동대입구 본점",
-                            "커피 템플 (Coffee Temple)",
-                            "헬카페 로스터즈 (Hell Cafe)"
-                          ].filter(item => item.includes(e.target.value));
-                          (window as any)._suggestList = mockSuggestions;
-                        } else {
-                          (window as any)._suggestList = [];
+                        const val = e.target.value;
+                        setPlace(val);
+                        setShowSuggestions(true);
+
+                        // Clear previous timer
+                        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+
+                        if (val.trim().length < 2) {
+                          setPlaceSuggestions([]);
+                          setIsSearchingPlace(false);
+                          return;
                         }
+
+                        setIsSearchingPlace(true);
+                        // Debounce 400ms then call server-side API route
+                        searchTimeoutRef.current = setTimeout(async () => {
+                          try {
+                            const res = await fetch(`/api/search-places?q=${encodeURIComponent(val)}`);
+                            const data = await res.json();
+                            setIsSearchingPlace(false);
+                            if (data.items && Array.isArray(data.items)) {
+                              setPlaceSuggestions(data.items as PlaceSuggestion[]);
+                            } else {
+                              setPlaceSuggestions([]);
+                            }
+                          } catch {
+                            setIsSearchingPlace(false);
+                            setPlaceSuggestions([]);
+                          }
+                        }, 400);
                       }}
                       className="w-full text-xs font-bold text-zinc-900 border-none outline-none focus:ring-0 p-0 placeholder-zinc-400 bg-transparent"
                     />
+                    {isSearchingPlace && (
+                      <div className="w-4 h-4 border-2 border-[#C08C5D] border-t-transparent rounded-full animate-spin shrink-0" />
+                    )}
                   </div>
-                  
-                  {/* Autocomplete suggestion UI popup */}
-                  {place && (window as any)._suggestList && (window as any)._suggestList.length > 0 && (
-                    <div className="absolute left-14 right-4 top-16 bg-white border border-zinc-200 rounded-xl shadow-lg z-30 flex flex-col max-h-40 overflow-y-auto">
-                      {((window as any)._suggestList as string[]).map((suggestion, index) => (
+
+                  {/* Selected place address display */}
+                  {customCoord && place && (
+                    <div className="flex items-center gap-1 pl-10 mt-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#8B5A2B] shrink-0" />
+                      <span className="text-[10px] text-[#8B5A2B] font-medium">
+                        위치 선택됨 ({customCoord.lat.toFixed(4)}, {customCoord.lng.toFixed(4)})
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Autocomplete Dropdown */}
+                  {showSuggestions && placeSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-zinc-200 rounded-2xl shadow-xl z-50 overflow-hidden max-h-64 overflow-y-auto">
+                      {placeSuggestions.map((suggestion, index) => (
                         <button
                           key={index}
                           type="button"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => {
-                            setPlace(suggestion);
-                            (window as any)._suggestList = [];
+                            setPlace(suggestion.title);
+                            if (suggestion.lat && suggestion.lng) {
+                              setCustomCoord({ lat: suggestion.lat, lng: suggestion.lng });
+                            }
+                            setPlaceSuggestions([]);
+                            setShowSuggestions(false);
                           }}
-                          className="text-left px-3 py-2 text-xs hover:bg-[#FAF6F0] text-zinc-800 border-b border-zinc-50 last:border-b-0"
+                          className="w-full text-left px-4 py-3 hover:bg-[#FAF6F0] transition-colors flex flex-col gap-0.5 border-b border-zinc-50 last:border-b-0"
                         >
-                          {suggestion}
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-3 h-3 text-[#8B5A2B] shrink-0" />
+                            <span className="text-xs font-bold text-zinc-900 truncate">{suggestion.title}</span>
+                            {suggestion.category && (
+                              <span className="text-[9px] text-[#8B5A2B] bg-[#FAF6F0] border border-[#E9E1D6] px-1.5 py-0.5 rounded-full shrink-0 truncate max-w-[80px]">
+                                {suggestion.category.split(">").pop()?.trim()}
+                              </span>
+                            )}
+                          </div>
+                          {suggestion.roadAddress && (
+                            <span className="text-[10px] text-zinc-400 pl-5 truncate">{suggestion.roadAddress}</span>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -975,122 +1043,140 @@ export default function Home() {
         {/* MAP TAB */}
         {activeTab === "map" && (
           <div className="p-4 animate-fade-in flex flex-col gap-4">
-            <div className="border-b border-[#E9E1D6] pb-2 flex justify-between items-end">
-              <div>
-                <h2 className="text-xs font-bold text-[#2A1A12]">아인슈페너 맛집 지도</h2>
-                <p className="text-[9px] text-[#8B5A2B]">지도 그리드를 클릭하면 새로운 핀을 생성해 기록할 수 있습니다.</p>
-              </div>
-              <button
-                onClick={fetchCurrentLocation}
-                className={`flex items-center gap-1 text-[9px] bg-[#4A3525] text-[#FAF6F0] px-2 py-1 rounded-full border border-[#5C4535] transition-all hover:bg-[#5C4535] active:scale-95 ${isGettingLocation ? "animate-pulse" : ""}`}
-              >
-                <Navigation className="w-2.5 h-2.5 text-[#C08C5D] fill-[#C08C5D]" />
-                <span>내위치 갱신</span>
-              </button>
-            </div>
-
-            {/* Naver Map Fullscreen Container */}
-            <div
-              ref={mapRef}
-              className="w-full aspect-square bg-[#ECE6DC] rounded-2xl overflow-hidden border border-[#E9E1D6] shadow-inner select-none"
-              style={{ height: "350px" }}
-            ></div>
-
-            {/* Selected Cafe Drawer Details on Map */}
-            {selectedMapCafe && (
-              <div className="bg-white border border-[#E9E1D6] rounded-2xl p-4 flex flex-col gap-3 shadow-md relative animate-slide-up">
-                <div className="flex gap-3">
-                  {selectedMapCafe.photo && (
-                    <div className="w-16 h-16 rounded-xl bg-[#FAF6F0] border border-[#E9E1D6] flex items-center justify-center overflow-hidden shrink-0">
+            
+            {/* 카페 선택됐을 때: 이미지 크게 → 카페 정보 → 지도 작게 */}
+            {selectedMapCafe ? (
+              <>
+                {/* 1. 이미지 크게 */}
+                <div className="w-full rounded-2xl overflow-hidden border border-[#E9E1D6] shadow-sm">
+                  {selectedMapCafe.photo ? (
+                    <div className="w-full aspect-square overflow-hidden">
                       <img src={selectedMapCafe.photo} alt={selectedMapCafe.place} className="w-full h-full object-cover" />
                     </div>
+                  ) : (
+                    <div className="w-full aspect-square bg-gradient-to-br from-[#2A1A12] to-[#4A3222] flex items-center justify-center">
+                      <Coffee className="w-12 h-12 text-[#FAF6F0]/20" />
+                    </div>
                   )}
+                </div>
 
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-xs font-bold text-[#2A1A12] truncate pr-6">{selectedMapCafe.place}</h3>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <div className="flex items-center gap-0.5 text-amber-500 font-bold text-[11px]">
-                        <Star className="w-3.5 h-3.5 fill-amber-500" />
-                        <span>{selectedMapCafe.rating.toFixed(1)}</span>
+                {/* 2. 카페 정보 */}
+                <div className="bg-white border border-[#E9E1D6] rounded-2xl overflow-hidden shadow-md animate-slide-up">
+                  <div className="p-4 flex flex-col gap-3">
+                    {/* 카페 이름 + 별점 + 가격 */}
+                    <div>
+                      <h3 className="text-sm font-bold text-[#2A1A12]">{selectedMapCafe.place}</h3>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <div className="flex items-center gap-0.5 text-amber-500 font-bold text-[11px]">
+                          <Star className="w-3.5 h-3.5 fill-amber-500" />
+                          <span>{selectedMapCafe.rating.toFixed(1)}</span>
+                        </div>
+                        <span className="w-1 h-1 bg-zinc-300 rounded-full"></span>
+                        <span className="text-[10px] text-[#8B5A2B] font-mono">{selectedMapCafe.price.toLocaleString()}원</span>
+                        {selectedMapCafe.distance && (
+                          <>
+                            <span className="w-1 h-1 bg-zinc-300 rounded-full"></span>
+                            <span className="text-[9px] text-blue-500 font-bold">
+                              {(selectedMapCafe.distance / 1000).toFixed(2)}km
+                            </span>
+                          </>
+                        )}
                       </div>
-                      <span className="w-1 h-1 bg-zinc-300 rounded-full"></span>
-                      <span className="text-[10px] text-[#8B5A2B] font-mono">{selectedMapCafe.price.toLocaleString()}원</span>
                     </div>
 
-                    {selectedMapCafe.distance && (
-                      <span className="inline-block text-[9px] text-blue-500 font-bold mt-1 bg-blue-50 px-1.5 py-0.5 rounded">
-                        내 위치로부터 {(selectedMapCafe.distance / 1000).toFixed(2)}km
-                      </span>
-                    )}
+                    <div className="flex flex-col gap-3">
+                      {/* 크림 당도 */}
+                      <div className="bg-[#FAF6F0] p-4 rounded-2xl border border-[#E9E1D6] flex flex-col gap-2.5">
+                        <div className="flex gap-1.5 justify-between">
+                          {Array.from({ length: 10 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={`w-7 h-7 rounded-full border ${
+                                i === normalizeVal(selectedMapCafe.sweetness, selectedMapCafe.id) - 1
+                                  ? "bg-[#8B5A2B] border-[#8B5A2B]"
+                                  : "bg-white border-zinc-200"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex justify-between text-xs font-bold text-zinc-700 px-1">
+                          <span>덜 단 크림</span>
+                          <span>단 크림</span>
+                        </div>
+                      </div>
+
+                      {/* 크림 질감 */}
+                      <div className="bg-[#FAF6F0] p-4 rounded-2xl border border-[#E9E1D6] flex flex-col gap-2.5">
+                        <div className="flex gap-1.5 justify-between">
+                          {Array.from({ length: 10 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={`w-7 h-7 rounded-full border ${
+                                i === normalizeVal(selectedMapCafe.texture, selectedMapCafe.id) - 1
+                                  ? "bg-[#8B5A2B] border-[#8B5A2B]"
+                                  : "bg-white border-zinc-200"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex justify-between text-xs font-bold text-zinc-700 px-1">
+                          <span>묽음</span>
+                          <span>꾸덕함</span>
+                        </div>
+                      </div>
+
+                      {/* 커피 맛 */}
+                      <div className="bg-[#FAF6F0] p-4 rounded-2xl border border-[#E9E1D6] flex flex-col gap-2.5">
+                        <div className="flex gap-1.5 justify-between">
+                          {Array.from({ length: 10 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={`w-7 h-7 rounded-full border ${
+                                i === normalizeVal(selectedMapCafe.coffeeTaste, selectedMapCafe.id) - 1
+                                  ? "bg-[#8B5A2B] border-[#8B5A2B]"
+                                  : "bg-white border-zinc-200"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex justify-between text-xs font-bold text-zinc-700 px-1">
+                          <span>산미</span>
+                          <span>고소</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-[#7A6A5E] bg-zinc-50 p-2.5 rounded-lg border border-[#F0E6D8] leading-relaxed">
+                      {selectedMapCafe.notes}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  {/* 크림 당도 */}
-                  <div className="bg-[#FAF6F0] p-4 rounded-2xl border border-[#E9E1D6] flex flex-col gap-2.5">
-                    <div className="flex gap-1.5 justify-between">
-                      {Array.from({ length: 10 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-7 h-7 rounded-full border ${
-                            i === normalizeVal(selectedMapCafe.sweetness, selectedMapCafe.id) - 1
-                              ? "bg-[#8B5A2B] border-[#8B5A2B]"
-                              : "bg-white border-zinc-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <div className="flex justify-between text-xs font-bold text-zinc-700 px-1">
-                      <span>덜 단 크림</span>
-                      <span>단 크림</span>
-                    </div>
-                  </div>
-
-                  {/* 크림 질감 */}
-                  <div className="bg-[#FAF6F0] p-4 rounded-2xl border border-[#E9E1D6] flex flex-col gap-2.5">
-                    <div className="flex gap-1.5 justify-between">
-                      {Array.from({ length: 10 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-7 h-7 rounded-full border ${
-                            i === normalizeVal(selectedMapCafe.texture, selectedMapCafe.id) - 1
-                              ? "bg-[#8B5A2B] border-[#8B5A2B]"
-                              : "bg-white border-zinc-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <div className="flex justify-between text-xs font-bold text-zinc-700 px-1">
-                      <span>묽음</span>
-                      <span>꾸덕함</span>
-                    </div>
-                  </div>
-
-                  {/* 커피 맛 */}
-                  <div className="bg-[#FAF6F0] p-4 rounded-2xl border border-[#E9E1D6] flex flex-col gap-2.5">
-                    <div className="flex gap-1.5 justify-between">
-                      {Array.from({ length: 10 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-7 h-7 rounded-full border ${
-                            i === normalizeVal(selectedMapCafe.coffeeTaste, selectedMapCafe.id) - 1
-                              ? "bg-[#8B5A2B] border-[#8B5A2B]"
-                              : "bg-white border-zinc-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <div className="flex justify-between text-xs font-bold text-zinc-700 px-1">
-                      <span>산미</span>
-                      <span>고소</span>
-                    </div>
-                  </div>
+                {/* 3. 지도 작게 */}
+                <div
+                  ref={mapRef}
+                  className="w-full bg-[#ECE6DC] rounded-2xl overflow-hidden border border-[#E9E1D6] shadow-inner select-none"
+                  style={{ height: "180px" }}
+                />
+              </>
+            ) : (
+              /* 카페 미선택 시: 지도 크게 */
+              <>
+                <div
+                  ref={mapRef}
+                  className="w-full bg-[#ECE6DC] rounded-2xl overflow-hidden border border-[#E9E1D6] shadow-inner select-none"
+                  style={{ height: "350px" }}
+                />
+                <div className="pb-4 pt-2 bg-gradient-to-t from-[#FDFBF7] to-transparent">
+                  <button
+                    onClick={() => setActiveTab("record")}
+                    className="w-full bg-[#2A1A12] text-[#FAF6F0] text-sm font-bold py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-2 hover:bg-[#3A2A1A] active:scale-[0.98] transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    지도에서 기록하기
+                  </button>
                 </div>
-
-                <p className="text-[10px] text-[#7A6A5E] bg-zinc-50 p-2.5 rounded-lg border border-[#F0E6D8] leading-relaxed">
-                  {selectedMapCafe.notes}
-                </p>
-              </div>
+              </>
             )}
           </div>
         )}
