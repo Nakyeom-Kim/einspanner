@@ -54,10 +54,11 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const priceInputRef = React.useRef<HTMLInputElement>(null);
 
   // Record Form States
   const [place, setPlace] = useState("");
-  const [price, setPrice] = useState<number>(5500);
+  const [price, setPrice] = useState<number>(0);
   const [sweetness, setSweetness] = useState<number>(0);
   const [texture, setTexture] = useState<number>(0);
   const [coffeeTaste, setCoffeeTaste] = useState<number>(0);
@@ -367,7 +368,7 @@ export default function Home() {
 
       // Reset Form
       setPlace("");
-      setPrice(5500);
+      setPrice(0);
       setSweetness(0);
       setTexture(0);
       setCoffeeTaste(0);
@@ -408,7 +409,7 @@ export default function Home() {
       saveRecords(updated);
 
       setPlace("");
-      setPrice(5500);
+      setPrice(0);
       setSweetness(0);
       setTexture(0);
       setCoffeeTaste(0);
@@ -909,6 +910,12 @@ export default function Home() {
                       autoComplete="off"
                       placeholder="카페 이름을 입력하세요..."
                       value={place}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          priceInputRef.current?.focus();
+                        }
+                      }}
                       onFocus={() => { if (placeSuggestions.length > 0) setShowSuggestions(true); }}
                       onBlur={() => { setTimeout(() => setShowSuggestions(false), 150); }}
                       onChange={(e) => {
@@ -974,6 +981,9 @@ export default function Home() {
                             }
                             setPlaceSuggestions([]);
                             setShowSuggestions(false);
+                            setTimeout(() => {
+                              priceInputRef.current?.focus();
+                            }, 50);
                           }}
                           className="w-full text-left px-4 py-3 hover:bg-zinc-100 transition-colors flex flex-col gap-0.5 border-b border-[#292929] last:border-b-0"
                         >
@@ -999,6 +1009,7 @@ export default function Home() {
                   <span className="text-xs font-mono font-medium tracking-[0.1em] uppercase text-[#292929]">PRICE (KRW)</span>
                   <div className="flex items-center gap-1">
                     <input 
+                      ref={priceInputRef}
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
