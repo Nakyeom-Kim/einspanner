@@ -106,58 +106,17 @@ export default function Home() {
       // 1. Fetch current records from Supabase
       const { data: dbRecords, error: fetchError } = await supabase
         .from('einspanner_records')
-        .select('*');
-
-      if (fetchError) throw fetchError;
-
-      // 2. Identify records that exist locally but not in DB, and insert them
-      const dbIds = new Set((dbRecords || []).map(r => r.id));
-      const userRecords = localRecords.filter(r => r.id.startsWith("user_"));
-      const recordsToInsert = userRecords.filter(r => !dbIds.has(r.id));
-
-      if (recordsToInsert.length > 0) {
-        const formatted = recordsToInsert.map(r => ({
-          id: r.id,
-          place: r.place,
-          photo: r.photo,
-          price: r.price,
-          sweetness: r.sweetness,
-          texture: r.texture,
-          coffee_taste: r.coffeeTaste,
-          notes: r.notes,
-          rating: r.rating,
-          lat: r.lat,
-          lng: r.lng,
-          created_at: r.createdAt
-        }));
-
-        const { error: insertError } = await supabase
-          .from('einspanner_records')
-          .insert(formatted);
-
-        if (insertError) throw insertError;
-      }
-
-      // 3. Get updated records from DB and merge
-      const { data: updatedDbRecords, error: refetchError } = await supabase
-        .from('einspanner_records')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (refetchError) throw refetchError;
+      if (fetchError) throw fetchError;
 
-      const mergedMap = new Map<string, EinspannerRecord>();
-      
-      // Seed with initial default cafes first
-      INITIAL_CAFES.forEach(c => mergedMap.set(c.id, c));
+      const syncedList: EinspannerRecord[] = [];
 
-      // Add local state user records
-      userRecords.forEach(c => mergedMap.set(c.id, c));
-
-      // Overwrite/merge with DB records
-      if (updatedDbRecords) {
-        updatedDbRecords.forEach(db => {
-          mergedMap.set(db.id, {
+      // Only use records that exist in the database (Supabase is the single source of truth)
+      if (dbRecords) {
+        dbRecords.forEach(db => {
+          syncedList.push({
             id: db.id,
             place: db.place,
             photo: db.photo || "",
@@ -174,12 +133,8 @@ export default function Home() {
         });
       }
 
-      const mergedList = Array.from(mergedMap.values()).sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-
-      setRecords(mergedList);
-      localStorage.setItem("einspanner_records", JSON.stringify(mergedList));
+      setRecords(syncedList);
+      localStorage.setItem("einspanner_records", JSON.stringify(syncedList));
     } catch (err) {
       console.error("Supabase sync error:", err);
     } finally {
@@ -665,7 +620,13 @@ export default function Home() {
 
   // Sorting logic for rankings
   const getSortedRankings = () => {
-    const list = [...enhancedRecords];
+    let list = [...enhancedRecords];
+    if (searchQuery.trim()) {
+      list = list.filter(rec =>
+        rec.place.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rec.notes.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
     switch (rankingFilter) {
       case "rating":
         return list.sort((a, b) => b.rating - a.rating);
@@ -727,15 +688,15 @@ export default function Home() {
         {activeTab !== "home" && activeTab !== "record" && (
           <button
             onClick={() => { setActiveTab("home"); setSelectedMapCafe(null); }}
-            className="absolute left-4 p-2 hover:bg-zinc-100 transition-colors flex items-center justify-center border border-transparent"
+            className="absolute left-4 p-2 hover:bg-zinc-100 transition-colors flex items-center justify-center border border-transparent z-10"
           >
             <svg className="w-4 h-4 text-[#292929]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
         )}
-        {activeTab === "home" && (
-          <div className="w-full flex items-center justify-between gap-3">
+        {(activeTab === "home" || activeTab === "ranking") ? (
+          <div className={`w-full flex items-center justify-between gap-3 ${activeTab === "ranking" ? "pl-10 pr-20" : ""}`}>
             {/* Sleek Search Input */}
             <div className="relative flex-1">
               <Search className="w-3.5 h-3.5 text-[#292929] absolute left-3 top-1/2 -translate-y-1/2" />
@@ -767,11 +728,19 @@ export default function Home() {
               <span className="text-[10px] font-mono font-medium tracking-[0.1em] uppercase">SYNC</span>
             </button>
           </div>
-        )}
-        {(activeTab === "map" || activeTab === "ranking") && (
+        ) : null}
+        {(activeTab === "map") && (
           <button
             onClick={() => { setActiveTab("home"); setSelectedMapCafe(null); }}
-            className="absolute right-4 text-xs font-mono font-medium tracking-[0.1em] uppercase bg-white text-[#292929] hover:bg-[#292929] hover:text-white border border-[#292929] px-3 py-1.5 transition-all"
+            className="absolute right-4 text-xs font-mono font-medium tracking-[0.1em] uppercase bg-white text-[#292929] hover:bg-[#292929] hover:text-white border border-[#292929] px-3 py-1.5 transition-all z-10"
+          >
+            CLOSE
+          </button>
+        )}
+        {activeTab === "ranking" && (
+          <button
+            onClick={() => { setActiveTab("home"); setSelectedMapCafe(null); }}
+            className="absolute right-4 text-xs font-mono font-medium tracking-[0.1em] uppercase bg-white text-[#292929] hover:bg-[#292929] hover:text-white border border-[#292929] px-3 py-1.5 transition-all z-10"
           >
             CLOSE
           </button>
@@ -874,38 +843,73 @@ export default function Home() {
 
             {/* 검색 결과 표시 (검색어가 있을 경우) */}
             {searchQuery.trim() && (
-              <div className="bg-white border border-[#E9E1D6] rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-                <div className="border-b border-[#FAF6F0] pb-2">
-                  <h3 className="text-xs font-extrabold text-[#2A1A12]">검색 결과 ({filteredRecords.length})</h3>
+              <div className="bg-white border border-[#292929] p-4 flex flex-col gap-4 stagger-item">
+                <div className="flex justify-between items-center border-b border-[#292929] pb-2">
+                  <span className="font-mono text-xs font-medium tracking-[0.1em] uppercase text-[#292929]">
+                    00 / SEARCH RESULTS ({filteredRecords.length})
+                  </span>
                 </div>
                 {filteredRecords.length > 0 ? (
-                  <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto">
-                    {filteredRecords.map((cafe) => (
-                      <div
-                        key={cafe.id}
-                        onClick={() => { setSelectedMapCafe(cafe); setActiveTab("map"); }}
-                        className="flex items-center gap-3 p-2 hover:bg-[#FAF6F0] rounded-xl border border-transparent hover:border-[#E9E1D6] transition-colors cursor-pointer"
-                      >
-                        <div className="w-12 h-12 rounded-lg bg-[#FAF6F0] border border-[#E9E1D6]/40 flex items-center justify-center overflow-hidden shrink-0">
-                          {cafe.photo ? (
-                            <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover" />
-                          ) : (
-                            <Coffee className="w-5 h-5 text-[#C08C5D]" />
-                          )}
+                  <div className="flex flex-col gap-4 max-h-[400px] overflow-y-auto no-scrollbar">
+                    {filteredRecords.map((cafe, index) => {
+                      const displayNum = String(index + 1).padStart(2, '0');
+                      return (
+                        <div
+                          key={cafe.id}
+                          className="bg-white border border-[#292929] p-4 flex gap-4 relative"
+                        >
+                          {/* Index Rank Number */}
+                          <div className="absolute top-4 left-4 w-6 h-6 border border-[#292929] bg-white flex items-center justify-center font-mono text-[10px] text-[#292929] font-bold z-10">
+                            {displayNum}
+                          </div>
+
+                          <div className="pl-8 flex gap-4 w-full">
+                            {/* Image Frame */}
+                            <div className="w-16 h-16 bg-zinc-50 border border-[#292929] flex items-center justify-center overflow-hidden shrink-0">
+                              {cafe.photo ? (
+                                <img src={cafe.photo} alt={cafe.place} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="font-mono text-[8px] tracking-tight text-zinc-400">NO IMG</span>
+                              )}
+                            </div>
+
+                            <div className="flex-1 min-w-0 flex flex-col justify-between">
+                              <div>
+                                <div className="flex items-center justify-between gap-1">
+                                  <h4 className="text-xs font-semibold text-[#292929] truncate uppercase tracking-tight">{cafe.place}</h4>
+                                  <span className="text-[10px] text-[#292929] font-mono shrink-0">
+                                    {cafe.price.toLocaleString()} KRW
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-[10px] text-[#292929] font-mono">★ {cafe.rating.toFixed(1)}</span>
+                                  <span className="text-[10px] text-zinc-300">|</span>
+                                  <span className="text-[9px] text-[#292929] font-mono uppercase tracking-tight">
+                                    SWT: {cafe.sweetness} / TCK: {cafe.texture}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between mt-3 pt-2 border-t border-[#292929] border-dashed">
+                                <span className="text-[9px] text-zinc-400 font-mono uppercase">
+                                  {cafe.distance ? `DIST / ${(cafe.distance / 1000).toFixed(2)} KM` : "DIST / UNKNOWN"}
+                                </span>
+                                <button
+                                  onClick={() => { setSelectedMapCafe(cafe); setActiveTab("map"); }}
+                                  className="text-[9px] text-[#292929] font-mono tracking-[0.1em] uppercase font-bold flex items-center hover:underline"
+                                >
+                                  MAP VIEW →
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-bold text-[#2A1A12] truncate">{cafe.place}</h4>
-                          <p className="text-[9px] text-[#8B5A2B] font-mono mt-0.5">{cafe.price.toLocaleString()}원</p>
-                        </div>
-                        <div className="flex items-center gap-0.5 text-amber-500 font-bold text-[10px] shrink-0">
-                          <Star className="w-3.5 h-3.5 fill-amber-500" />
-                          <span>{cafe.rating.toFixed(1)}</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
-                  <p className="text-[10px] text-[#A59586] text-center py-4">일치하는 카페가 없습니다.</p>
+                  <p className="text-[10px] font-mono text-[#292929] text-center py-4">NO MATCHING CAFE FOUND.</p>
                 )}
               </div>
             )}
